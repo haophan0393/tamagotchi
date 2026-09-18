@@ -1,7 +1,7 @@
 # Game Concept: Pocket Pal
 
 *Created: 2026-09-18*
-*Status: Draft*
+*Status: Draft — revised 2026-09-18 after `/design-review` (see `reviews/game-concept-review-log.md`)*
 
 ---
 
@@ -20,7 +20,7 @@
 | **Target Audience** | Nostalgic 90s kids (25–40) and cozy casual players who want a kind daily ritual — see Player Profile |
 | **Player Count** | Single-player |
 | **Session Length** | 1–3 minutes, once a day |
-| **Monetization** | Undecided — no ads, energy timers, or loot boxes (anti-pillar). Candidates: one-time premium price, or free with optional cosmetic shell packs post-launch. Decide before v1.0. |
+| **Monetization** | **Decided: shells are earned through play, never sold.** No ads, energy timers, loot boxes, or cosmetic IAP (anti-pillar). Remaining question is the price model only — one-time premium vs. free with no IAP — decide before v1.0. |
 | **Estimated Scope** | Small (7–8 weeks to v1.0, solo; full vision 3–6 months of post-launch updates, solo) |
 | **Comparable Titles** | Tamagotchi Original (1996 / 2017 re-release), Neko Atsume, Pou, My Tamagotchi Forever, Finch |
 
@@ -55,9 +55,9 @@ It's like the original Tamagotchi, AND ALSO the *device itself* is the star — 
 | **Submission** (relaxation, comfort zone) | 2 | Forgiving real-time decay, no fail state, a clear "done for today" state |
 | **Fantasy** (make-believe, role-playing) | 3 | A living creature in your pocket that greets you and grows with you |
 | **Discovery** (exploration, secrets) | 4 | Which adult form will emerge from your care habits? Hidden forms, later shells and species |
-| **Expression** (self-expression, creativity) | 5 | Choosing device shells (post-launch: personality shaped by your routine) |
-| **Narrative** (drama, story arc) | 6 | The life arc of each pet — egg to graduation — and the photo album of graduates |
-| **Challenge** (obstacle course, mastery) | 7 | Minimal — a tiny left/right mini-game; care consistency, not difficulty |
+| **Narrative** (drama, story arc) | 5 | The life arc of each pet — egg to graduation — and the album of graduates; the album does real narrative work and is ranked accordingly |
+| **Expression** (self-expression, creativity) | 6 | Choosing device shells (post-launch: personality shaped by your routine) |
+| **Challenge** (obstacle course, mastery) | 7 | Minimal — a tiny left/right mini-game; care style, not difficulty |
 | **Fellowship** (social connection) | N/A | Not in v1 (anti-pillar) |
 
 ### Key Dynamics (Emergent player behaviors)
@@ -70,11 +70,11 @@ It's like the original Tamagotchi, AND ALSO the *device itself* is the star — 
 
 ### Core Mechanics (Systems we build)
 
-1. **Device Frame & Button Input** — three round buttons (menu cycle / select / cancel) drive every interaction; the boxy LCD renders the pet at low resolution with a visible pixel grid.
+1. **Device Frame & Button Input** — three round buttons drive every interaction; the boxy LCD renders the pet at low resolution with a visible pixel grid. *Three buttons* is a pillar; *cycle-then-select* is the default navigation pattern, not a pillar — the Device Frame GDD may choose another 3-button scheme. Concept-level constraint: **any care action is reachable in ≤3 presses from the idle screen.**
 2. **Need System** — four needs (hunger, cleanliness, fun, sleep) decay slowly in real time, tuned so one check-in per day keeps the pet content; needs cap at "sad/messy," never fatal.
 3. **Care Actions** — feed, clean, play (one mini-game), lights on/off; each triggers a pet reaction animation, beep, and haptic.
-4. **Life Stage & Growth** — egg → baby → child → adult over ~7–10 real days; cumulative care quality selects among adult forms; the adult graduates into an album and a new egg arrives.
-5. **Offline Time Simulation** — on resume, elapsed real time is applied to needs and growth (with a forgiving floor), so the pet feels alive when the app is closed.
+4. **Life Stage & Growth** — egg → baby → child → adult over ~7–10 *check-in days* (days the player opens the app; absent days pause the arc, they never count against it). The adult form is selected by **care style over a rolling recent window** — which needs you tended most (play-heavy, feed-heavy, etc.), never how much or how consistently you cared. Missed days fade out of the window and leave no permanent mark. A visible "nearly grown" state precedes graduation; the graduation itself waits for a player press. The adult then moves into the album and a new egg arrives.
+5. **Offline Time Simulation** — on resume, elapsed real time is applied to *needs* so the pet feels alive when the app is closed. Design positions: timestamps are UTC epoch; `elapsed = clamp(now − last_seen, 0, MAX_OFFLINE)` (never negative, never unbounded); needs decay to a non-fatal floor; growth does **not** advance offline — it steps only on real check-in days (see 4), which also neutralises clock-forward exploits. Long absences are acknowledged with a warm visual greeting beat ("I missed you"), never a penalty — 2 weeks and 6 months away both land on a pet that is glad to see you.
 
 ---
 
@@ -84,8 +84,8 @@ It's like the original Tamagotchi, AND ALSO the *device itself* is the star — 
 
 | Need | How This Game Satisfies It | Strength |
 | ---- | ---- | ---- |
-| **Autonomy** (freedom, meaningful choice) | Which need to tend first, whether to play or skip the game, which egg to hatch next, which shell to display | Supporting |
-| **Competence** (mastery, skill growth) | Learning what the pet responds to; steering toward a healthy or rare adult form through consistent care | Supporting |
+| **Autonomy** (freedom, meaningful choice) | Whether to play or skip the mini-game, how to *style* your care (and therefore steer the adult form), when to confirm graduation, which shell to display. (Order of tending needs is deliberately *not* a meaningful choice — it never matters mechanically.) | Supporting |
+| **Competence** (mastery, skill growth) | Learning what the pet responds to; steering toward a specific or rare adult form by shaping your care style | Supporting |
 | **Relatedness** (connection, belonging) | The pet greets you, idles with personality, and remembers you in the album of graduates | Core |
 
 ### Player Type Appeal (Bartle Taxonomy)
@@ -102,14 +102,14 @@ It's like the original Tamagotchi, AND ALSO the *device itself* is the star — 
 - **Onboarding curve**: the first session is the egg hatching — the device shows one blinking button; pressing it cycles the menu; the pet's first need appears with an icon. No text tutorial; the three buttons teach themselves within 60 seconds.
 - **Difficulty scaling**: none in the traditional sense. Depth comes from the growth system revealing that *how* you care matters, not from harder tasks.
 - **Feedback clarity**: need icons clear one at a time; the pet's idle animation shifts from sad to content; a stage-up animation marks growth; the album records outcomes.
-- **Recovery from failure**: there is no failure. Extended neglect leaves the pet sad and messy but two minutes of care fully restores it. Care quality affects which adult emerges, never whether one emerges.
+- **Recovery from failure**: there is no failure. Extended neglect leaves the pet sad and messy but two minutes of care fully restores it. Care *style* affects which adult emerges, never whether one emerges — and because selection is rolling-window, a bad week is visibly recoverable.
 
 ---
 
 ## Core Loop
 
 ### Moment-to-Moment (30 seconds)
-Open app → the device fills the screen → glance at the LCD for the pet and its need icons → press a round button to cycle the menu → press to select an action → pet reacts with a bouncy sprite animation, an LCD-style chirp, and a haptic click → need icon clears. Every press must feel physical: sound + haptic + screen flicker, every time.
+Open app → the device fills the screen → **the pet notices you first** (an unprompted greeting beat, distinct from any button press — longer if you've been away) → glance at the LCD for the pet and its need icons → press a round button to cycle the menu → press to select an action → pet reacts with a bouncy sprite animation, an LCD-style chirp, and a haptic click → need icon clears. Every press must feel physical: sound + haptic + screen flicker, every time. **The visual channel alone must carry the full experience** — sound and haptics are amplifiers, because the stated use context (morning, bedtime) is the most mute-prone there is.
 
 ### Short-Term (5-15 minutes)
 The daily session: clear needs in whatever order (feed → clean → play → lights). Each cleared need moves the pet toward "content." When all icons are gone the pet performs its happy idle — the game's explicit "you're done for today" signal. Optional: replay the mini-game a couple of times for fun.
@@ -118,7 +118,7 @@ The daily session: clear needs in whatever order (feed → clean → play → li
 Deliberately inverted for this genre: the *whole* session is 1–3 minutes, once a day. Natural stopping point is the happy idle. Reason to return: a single gentle daily notification, and the open question of what the pet is becoming.
 
 ### Long-Term Progression
-Egg → baby → child → adult over ~7–10 real days. Consistency of care across the arc selects the adult form (2 forms in MVP, 4+ at v1.0). The adult graduates — waves goodbye, moves into the album — and a new egg arrives. Long-term goal: complete the album. Post-launch layers slot in here: device shells unlock per graduation, personality quirks emerge from routine, new species arrive as new eggs.
+Egg → baby → child → adult over ~7–10 check-in days. The *style* of recent care selects the adult form (2 forms in MVP, 4+ at v1.0). A "nearly grown" state signals the arc is ending; the adult graduates on the player's press — waves goodbye, moves into the album — and a new egg arrives. Long-term goal: complete the album. Post-launch layers slot in here: device shells unlock per graduation (earned, never sold), personality quirks emerge from routine, new species arrive as new eggs.
 
 ### Retention Hooks
 - **Curiosity**: which adult form is this one becoming? Which forms haven't I seen?
@@ -131,12 +131,12 @@ Egg → baby → child → adult over ~7–10 real days. Consistency of care acr
 ## Game Pillars
 
 ### Pillar 1: The Device Is Real
-The phone shows a physical gadget. Every interaction goes through its round buttons and boxy LCD screen.
+The phone shows a physical gadget. Every interaction goes through its round buttons and boxy LCD screen. The device must feel complete with the sound off: visuals carry the experience, haptics and audio amplify it.
 
 *Design test*: If we're debating a slick modern UI overlay vs. doing it through the three buttons, we choose the buttons.
 
 ### Pillar 2: Never Guilt, Always Welcome
-The pet is glad to see you however long you've been gone. Neglect softens outcomes; it never punishes.
+The pet is glad to see you however long you've been gone. Neglect softens outcomes; it never punishes. Concretely: no cumulative scoring anywhere — the adult form reads recent care *style*, absent days pause growth rather than count against it, and returning after months earns a greeting, not a state report.
 
 *Design test*: If a feature adds pressure, shame, or penalty for absence, we cut it or soften it.
 
@@ -151,15 +151,15 @@ Vivid, saturated color is what separates this from the grey originals.
 *Design test*: If we're debating period-accurate monochrome vs. colorful, we choose colorful, always.
 
 ### Pillar 5: Simple Core, Infinite Shells
-The three-button loop never changes. Growth comes through art and content layers, not new mechanics.
+The three-button loop never changes. Growth comes through art and content layers, not new mechanics. (The *navigation scheme* within three buttons is a Device Frame GDD decision; the button count is not.)
 
 *Design test*: If a new feature changes how the buttons work or adds a fourth input, we reject it.
 
-**Pillar tensions (where interesting decisions live)**: 1 vs 4 (authenticity vs. color); 2 vs progression (care must matter without neglect punishing); 3 vs 5 (adding content without lengthening sessions).
+**Pillar tensions (where interesting decisions live)**: 1 vs 4 (authenticity vs. color); 2 vs progression (care must matter without neglect punishing — resolved by style-based rolling-window selection); 3 vs 5 (adding content without lengthening sessions); Sensation vs. Submission (piezo SFX deliver #1, but the cozy #2 register may want an ambient bed — MVP ships SFX-only by conscious choice, revisit at vertical slice).
 
 ### Anti-Pillars (What This Game Is NOT)
 
-- **NOT a pressure-monetized game**: no loot boxes, energy timers, interstitial ads, or paid shells that nag. It would compromise *Never Guilt, Always Welcome*.
+- **NOT a pressure-monetized game**: no loot boxes, energy timers, interstitial ads, or paid shells of any kind — shells are earned. It would compromise *Never Guilt, Always Welcome*.
 - **NOT a death simulator**: the pet never dies or runs away; it graduates. Death would compromise *Never Guilt*.
 - **NOT a full-screen touch-the-pet sim**: no free camera, no petting gestures, no room decoration outside the LCD. It would compromise *The Device Is Real*.
 - **NOT a social or multiplayer game in v1**: no friends, visiting, or sharing systems. It would compromise *Two Minutes of Joy* and the timeline.
@@ -178,6 +178,7 @@ The three-button loop never changes. Growth comes through art and content layers
 1. **Two layers, never mixed** — the shell layer is smooth (vector or painted, soft highlights, rounded forms); the screen layer is chunky pixel art with a visible grid. *Design test*: if an element could live on either layer, decide which one it belongs to — nothing straddles both.
 2. **Toy-store palette** — shells use saturated, translucent-plastic hues (90s Game Boy Color, gel-pen, jelly-shoe colors). *Design test*: muted vs. saturated → saturated.
 3. **Motion means alive** — the pet always idles, buttons always depress, the LCD always has a faint flicker. *Design test*: if an element is static, give it a tick.
+4. **Visuals carry it alone** — every feedback moment (press, need cleared, stage-up, graduation) must read unmistakably with sound and haptics off. *Design test*: mute the device; if a moment goes flat, the visual is under-built.
 
 **Color philosophy**: shells carry the loud, saturated color and vary infinitely; the LCD uses a restrained 4–8 color palette so the pet stays readable at tiny size and looks right inside *any* shell. Color is the shell's job; clarity is the screen's job.
 
@@ -215,14 +216,14 @@ The three-button loop never changes. Growth comes through art and content layers
 
 | Consideration | Assessment |
 | ---- | ---- |
-| **Recommended Engine** | Godot 4.6 — the user's engine; strong 2D, lightweight, exports to iOS and Android; version already pinned in `docs/engine-reference/godot/` |
-| **Key Technical Challenges** | Offline time simulation from saved timestamps; local push notifications (requires a third-party Godot plugin on both platforms); haptics via `Input.vibrate_handheld`; low-res LCD rendering (SubViewport + pixel-grid shader); iOS signing and store submission |
+| **Recommended Engine** | Godot 4.7.1 — pinned in `CLAUDE.md` and `docs/engine-reference/godot/VERSION.md`; strong 2D, lightweight, exports to iOS and Android (GABE standalone Android export lowers the Android pipeline risk; iOS has no equivalent) |
+| **Key Technical Challenges** | Offline time simulation from saved UTC timestamps (depends on `NOTIFICATION_APPLICATION_PAUSED/_RESUMED` behaviour — unconfirmed for 4.7); local push notifications (**still OPEN** — no built-in API, plugin not yet identified, gates the Vertical Slice tier); haptics via `Input.vibrate_handheld` (signature verified, per-platform amplitude untested on device); low-res LCD rendering (**unvalidated** — SubViewport + pixel-grid shader vs. 4.7's `DrawableTexture2D`; the button-feel prototype cut the LCD from scope); Android 16 KB page-size requirement; safe-area API for notched phones; iOS signing and store submission |
 | **Art Style** | 2D, two-layer: smooth vector/painted device shells + ~32×32 pixel-art pet |
 | **Art Pipeline Complexity** | Low — pixel art keeps each new form/animation to minutes; shells are recolorable shapes |
 | **Audio Needs** | Minimal — a small set of piezo-style chirps and beeps, no music required for MVP |
 | **Networking** | None |
 | **Content Volume** | MVP: 1 shell, 1 species, egg + baby + child + 2 adult forms (~6 sprites × ~6 animations), 4 care actions, 1 mini-game. v1.0: 3 shell colorways, 4+ adult forms. Full vision: 10+ shells, 3+ species, seasonal palettes |
-| **Procedural Systems** | None — adult form selection is a simple rule table over care stats |
+| **Procedural Systems** | None — adult form selection is a rule table over rolling-window care-style stats (legible by design; being "solved" by players is the discovery payoff, not a failure) |
 
 ---
 
@@ -232,11 +233,14 @@ The three-button loop never changes. Growth comes through art and content layers
 - A 1–3 minute session may feel *too* thin — there may be nothing to linger on once needs are cleared.
 - A 7–10 day growth arc may feel slow to first-time players before they've bonded with the pet.
 - Adult-form selection may be illegible: if players can't tell how care influenced the outcome, the discovery aesthetic collapses.
+- Discovery does not land at MVP scope: 2 forms is a binary outcome, solved in one or two arcs. MVP tests the *press*, not the *discovery*; Discovery becomes real only at v1.0's 4+ forms.
+- Sessions may feel like a chore list with good juice unless the pet asserts its own presence — hence the unprompted greeting beat.
 - "Graduation" instead of death is untested emotionally — it might feel hollow rather than warm.
 
 ### Technical Risks
-- Local notifications in Godot 4.6 depend on community plugins whose maintenance and 4.6 compatibility must be verified.
-- Offline time simulation must be robust to clock changes, timezone shifts, and long absences without producing absurd states.
+- Local notifications in Godot 4.7.1 depend on community plugins whose maintenance and 4.7 compatibility must be verified — **still unresolved after `/setup-engine`**; the Vertical Slice tier is gated on this spike.
+- Offline time simulation must be robust to clock changes, timezone shifts, and long absences. Because there is no fail state, a broken sim produces *silently* absurd states with no organic bug-report path — boundary tests (negative delta, zero, DST, multi-year) are mandatory, not optional.
+- LCD rendering approach is unvalidated (SubViewport vs. `DrawableTexture2D`) and is Pillar-1-critical.
 - iOS builds require a Mac and a $99/year Apple Developer account; store review adds calendar time.
 - First game in Godot: tooling and export pipeline learning curve.
 
@@ -247,14 +251,15 @@ The three-button loop never changes. Growth comes through art and content layers
 ### Scope Risks
 - Shell art creep: every new shell is an asset; roadmap cost is entirely art time.
 - "Add features later" becomes "add features before launch" — personality, species, and shells all tempt pre-launch inclusion. The anti-pillars and MVP definition are the guardrail.
-- Solo first game on a weeks timeline leaves no slack for tooling surprises.
+- Solo first game on a weeks timeline leaves no slack for tooling surprises. The ~3-week MVP figure was set top-down from the 7–8 week total, not built up from tasks — verify with `/sprint-plan` before committing.
 
 ### Open Questions
-- Does pressing an on-screen button with haptics + beep actually feel satisfying on glass? → **Resolve with `/prototype`** (1–3 days): a device frame, three buttons, one pet sprite, one need.
+- ~~Does pressing an on-screen button with haptics + beep actually feel satisfying on glass?~~ → **Resolved: PROCEED** (`prototypes/device-button-feel-concept/REPORT.md`) on desktop; haptic sync on device still pending.
+- Is cycle-then-select the right 3-button navigation, and does it meet the ≤3-press budget? → Device Frame GDD + `/ux-design`.
 - What decay rate makes once-a-day feel right without guilt? → tune in the prototype with a compressed time scale.
-- Is graduation emotionally satisfying? → playtest at the vertical slice with 3–5 people.
-- Which notification plugin works on Godot 4.6 for both iOS and Android? → research spike during `/setup-engine` / architecture.
-- Monetization model → decide before v1.0; the anti-pillars constrain the options.
+- Is graduation emotionally satisfying? → playtest at the vertical slice with 3–5 people (directional signal only). PASS if ≥3 of 5 comment positively unprompted AND none believe the pet died.
+- Which notification plugin works on Godot 4.7.1 for both iOS and Android? → **still open**; research spike during architecture, recorded as an ADR. Gates the Vertical Slice tier.
+- Price model (one-time premium vs. free, no IAP) → decide before v1.0. Shell acquisition is already decided: earned, never sold.
 
 ---
 
@@ -262,13 +267,15 @@ The three-button loop never changes. Growth comes through art and content layers
 
 **Core hypothesis**: Pressing a colorful on-screen Tamagotchi button and watching the pet react is satisfying enough that players want to do it again tomorrow.
 
+**Falsifiable form**: with the MVP build in the hands of 8–10 testers and no reminder notification, ≥70% voluntarily reopen the app the next day. Below 50% falsifies the hypothesis; 50–70% is inconclusive and triggers a feel pass before further scope.
+
 **Required for MVP**:
 1. Device frame with three working round buttons (haptic + beep + visual depress) and a low-res LCD area.
-2. One pet species with egg → baby → child → adult stages and 2 adult forms selected by care quality.
+2. One pet species with egg → baby → child → adult stages (advancing on check-in days only) and 2 adult forms selected by rolling-window care style.
 3. Four needs (hunger, cleanliness, fun, sleep) with forgiving real-time decay and a non-fatal floor.
 4. Four care actions (feed, clean, play via one left/right mini-game, lights) with reaction animations.
-5. Offline time simulation and local save/load.
-6. Happy-idle "done for today" state.
+5. Offline time simulation (UTC, clamped, needs-only) and local save/load, with boundary tests.
+6. Happy-idle "done for today" state and the unprompted greeting beat on open.
 
 **Explicitly NOT in MVP** (defer to later):
 - Multiple device shells (v1.0: 3 colorways; full vision: 10+)
@@ -283,7 +290,7 @@ The three-button loop never changes. Growth comes through art and content layers
 | Tier | Content | Features | Timeline |
 | ---- | ---- | ---- | ---- |
 | **MVP** | 1 shell, 1 species, 2 adult forms | Core loop, offline time sim, local save | ~3 weeks |
-| **Vertical Slice** | 4 adult forms | + haptics/SFX/LCD polish, graduation + album, daily notification, hatching onboarding | ~5 weeks total |
+| **Vertical Slice** | 4 adult forms | + haptics/SFX/LCD polish, graduation (nearly-grown state + confirm press) + album, daily notification (**gated on the notification-plugin spike**), hatching onboarding | ~5 weeks total |
 | **Alpha / v1.0** | 3 shell colorways | + settings (sound/haptics toggle), store assets, iOS + Android submission | ~7–8 weeks total |
 | **Full Vision** | 10+ shells, 3+ species, seasonal palettes | + personality quirks, shell unlocks per graduation, hidden forms | 3–6 months of post-launch updates |
 
@@ -291,11 +298,11 @@ The three-button loop never changes. Growth comes through art and content layers
 
 ## Next Steps
 
-- [ ] Fill in CLAUDE.md technology stack based on engine choice (`/setup-engine` — Godot 4.6, mobile)
-- [ ] **Prototype core idea** (`/prototype device-button-feel`) — validate the pressable device is satisfying before writing GDDs
+- [x] Fill in CLAUDE.md technology stack based on engine choice (`/setup-engine` — Godot 4.7.1, mobile)
+- [x] **Prototype core idea** (`/prototype device-button-feel`) — PROCEED (desktop; haptics pending on device)
+- [x] Validate this concept doc (`/design-review design/gdd/game-concept.md`) — NEEDS REVISION → revised 2026-09-18
 - [ ] Create the art bible (`/art-bible`) from the Candy Gadget visual anchor
-- [ ] Validate this concept doc (`/design-review design/gdd/game-concept.md`)
-- [ ] If prototype PROCEEDS: decompose concept into systems (`/map-systems`)
+- [ ] Decompose concept into systems (`/map-systems`)
 - [ ] Design each system (`/design-system [system-name]`) — use prototype learnings in Tuning Knobs and Formulas sections
 - [ ] Build vertical slice in Pre-Production (`/vertical-slice`)
 - [ ] Validate core loop with playtest (`/playtest-report`)
