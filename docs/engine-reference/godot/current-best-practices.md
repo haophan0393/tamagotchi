@@ -1,9 +1,66 @@
 # Godot — Current Best Practices
 
-Last verified: 2026-02-12 | Engine: Godot 4.6
+Last verified: 2026-09-18 | Engine: Godot 4.7.1
 
 Practices that are **new or changed** since the model's training data (~4.3).
+Sections are newest-first; 4.7 items are the most likely to be unknown to the model.
 This supplements (not replaces) the agent's built-in knowledge.
+
+## GDScript (4.7)
+
+- **Explicit returns in typed overrides**: a method that inherits a typed return
+  from its parent must `return` explicitly — falling off the end is an error.
+- **Packed array element assignment does not call the setter**:
+  `stats[2] = 5` on `@export var stats: PackedInt32Array: set = _on_stats_set`
+  no longer triggers `_on_stats_set`. Reassign the whole array if you need it.
+- **Java interfaces from GDScript (Android)**: GDScript can implement and override
+  Java interfaces — reduces the need for a Java/Kotlin plugin for small hooks.
+
+## UI (4.7)
+
+- **`Control.offset_transform_*`**: translate / rotate / scale a Control visually
+  without affecting layout. Use for press-down, wobble, and bounce feedback.
+- **`PopupMenu` search bar**: long menus can be filtered.
+- **`RichTextLabel` font-size-relative images**: `[img height=1em]`.
+- **`TextureRect` tiles `AtlasTexture`** correctly now.
+- **Landmark navigation** for screen readers (builds on 4.5 AccessKit work).
+- **New project defaults**: stretch mode `canvas_items`, aspect `expand`.
+
+## Input & Mobile (4.7)
+
+- **`VirtualJoystick` node**: built-in on-screen joystick (Fixed, Dynamic, Following).
+- **Device ID constants**: `InputEvent.DEVICE_ID_KEYBOARD`, `InputEvent.DEVICE_ID_MOUSE`.
+- **Gyroscope / accelerometer** exposed for motion input (joypads and handhelds).
+- **iOS game controllers** now handled via SDL3.
+- **Android**: picture-in-picture, embedded/movable game window, script editor
+  orientation changes, Perfetto tracing default for debug builds.
+- **Wayland touch** support on Linux.
+- **4.7.1** fixed Android soft-keyboard backspace and touchscreen drag regressions.
+
+## Rendering (4.7)
+
+- **HDR output** on Windows, macOS, iOS, visionOS, Linux/Wayland.
+- **`DrawableTexture2D`**: draw into a texture without a SubViewport or
+  RenderingDevice code.
+- **`GradientTexture2D` conic fill**: CSS-style conic gradients.
+- **Nearest-neighbor 3D viewport scaling** for crisp retro rendering (3D only —
+  2D pixel look still comes from `canvas_items` stretch + `Nearest` texture filter).
+- **`AreaLight3D`**, clearcoat fixes, 3D particle scale/rotation (3D only).
+- **CanvasItem lines no longer feathered** — widths look thinner than 4.6.
+- **`LinearToSRGB` visual shader node** no longer clamps on Mobile/Forward+.
+
+## Animation & Tweens (4.7)
+
+- **`Tween.tween_await(signal)`**: pause the tween chain until a signal emits.
+- **Collapsible animation editor tracks** with aggregate keys.
+
+## Android & Export (4.7)
+
+- **Standalone Android export via GABE** (Godot Android Build Environment) — no
+  separate Android Studio install required for the standard export path.
+- **Custom splash screens** in the Android export preset.
+- **Selective export template download**: fetch only iOS + Android templates.
+- **Editor shows installed GDExtensions** in Project Settings.
 
 ## GDScript (4.5+)
 

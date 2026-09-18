@@ -1,8 +1,27 @@
 # Godot UI — Quick Reference
 
-Last verified: 2026-02-12 | Engine: Godot 4.6
+Last verified: 2026-09-18 | Engine: Godot 4.7.1
 
 ## What Changed Since ~4.3 (LLM Cutoff)
+
+### 4.7 Changes
+- **`Control.offset_transform_*`**: visual-only translate/rotate/scale that does not affect layout
+- **`PopupMenu` search bar** for long menus
+- **`RichTextLabel`**: font-size-relative images (`[img height=1em]`); `UPDATE_WIDTH_IN_PERCENT` → `UPDATE_WIDTH_UNIT`; `add_image()`/`update_image()` width/height are `float` and take `width_unit`/`height_unit: ImageUnit`
+- **`TextureRect`** now tiles `AtlasTexture`
+- **Landmark navigation** for screen readers
+- **`Tree`** drag-and-drop drop-position indicator; `TreeItem.select()` gains `set_as_cursor`
+- **New project defaults**: `display/window/stretch/mode = canvas_items`, `display/window/stretch/aspect = expand`
+
+### Visual Feedback Without Layout Churn (4.7 — NEW)
+```gdscript
+# Press-down effect on a device button that lives inside a container.
+# offset_transform_* is purely visual — the container never re-lays-out.
+func _press_visual() -> void:
+    var tween := create_tween()
+    tween.tween_property(self, "offset_transform_scale", Vector2(0.94, 0.94), 0.04)
+    tween.tween_property(self, "offset_transform_scale", Vector2.ONE, 0.08)
+```
 
 ### 4.6 Changes
 - **Dual-focus system**: Mouse/touch focus is now SEPARATE from keyboard/gamepad focus

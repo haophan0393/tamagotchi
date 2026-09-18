@@ -1,8 +1,11 @@
 # Godot Networking — Quick Reference
 
-Last verified: 2026-02-12 | Engine: Godot 4.6
+Last verified: 2026-09-18 | Engine: Godot 4.7.1
 
 ## What Changed Since ~4.3 (LLM Cutoff)
+
+### 4.7 Changes
+- No changes listed in the 4.6→4.7 migration guide for this subsystem
 
 ### 4.6 Changes
 - **Networking section in breaking changes**: See the official migration guide for

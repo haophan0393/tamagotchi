@@ -1,8 +1,26 @@
 # Godot Input — Quick Reference
 
-Last verified: 2026-02-12 | Engine: Godot 4.6
+Last verified: 2026-09-18 | Engine: Godot 4.7.1
 
 ## What Changed Since ~4.3 (LLM Cutoff)
+
+### 4.7 Changes
+- **`VirtualJoystick` node**: built-in touch joystick with Fixed / Dynamic / Following modes — do not hand-roll one
+- **Device ID constants**: keyboard/mouse events are no longer device `0`; use `InputEvent.DEVICE_ID_KEYBOARD` / `InputEvent.DEVICE_ID_MOUSE`
+- **Gyroscope / accelerometer** motion input exposed for joypads and handhelds
+- **iOS controllers** handled through SDL3
+- **`input_devices/joypads/ignore_joypad_on_unfocused_application`** project setting
+- **4.7.1**: Android soft-keyboard backspace and touchscreen drag-and-drop regressions fixed
+
+### Touch Buttons (4.7 — project pattern)
+```gdscript
+# Pocket Pal: three on-screen device buttons. Use TouchScreenButton or a
+# Control with gui_input; give press feedback via offset_transform (4.7).
+func _on_button_gui_input(event: InputEvent) -> void:
+    if event is InputEventScreenTouch and event.pressed:
+        _press_visual()   # animate offset_transform_scale, not scale
+        Input.vibrate_handheld(20)   # verify signature against 4.7 docs before relying on amplitude arg
+```
 
 ### 4.6 Changes
 - **Dual-focus system**: Mouse/touch focus is now separate from keyboard/gamepad focus

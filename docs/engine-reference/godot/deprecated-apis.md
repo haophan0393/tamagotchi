@@ -1,6 +1,6 @@
 # Godot — Deprecated APIs
 
-Last verified: 2026-02-12
+Last verified: 2026-09-18
 
 If an agent suggests any API in the "Deprecated" column, it MUST be replaced
 with the "Use Instead" column.
@@ -30,6 +30,12 @@ with the "Use Instead" column.
 | `Skeleton3D` signal `bone_pose_updated` | `skeleton_updated` | 4.3 | Renamed |
 | `AnimationPlayer.method_call_mode` | `AnimationMixer.callback_mode_method` | 4.3 | Moved to base class |
 | `AnimationPlayer.playback_active` | `AnimationMixer.active` | 4.3 | Moved to base class |
+| `RichTextLabel.ImageUpdateMask.UPDATE_WIDTH_IN_PERCENT` | `UPDATE_WIDTH_UNIT` | 4.7 | Renamed; width unit is now `RichTextLabel.ImageUnit` |
+| `RichTextLabel.add_image(..., width_in_percent, height_in_percent)` | `add_image(..., width_unit, height_unit)` | 4.7 | Params renamed and typed `ImageUnit`; width/height are `float` |
+| `AudioEffectSpectrumAnalyzer.tap_back_pos` | (removed — no replacement) | 4.7 | Property deleted |
+| Comparing `event.device == 0` for keyboard/mouse | `InputEvent.DEVICE_ID_KEYBOARD` / `InputEvent.DEVICE_ID_MOUSE` | 4.7 | Device IDs are no longer 0 |
+| `EditorSceneFormatImporter.IMPORT_SCENE` etc. | `EditorSceneFormatImporter.ImportFlags.IMPORT_SCENE` etc. | 4.7 | Moved into enum |
+| `Control.accessibility_live` as `DisplayServer.AccessibilityLiveMode` | `AccessibilityServer.AccessibilityLiveMode` | 4.7 | Type moved to new `AccessibilityServer` |
 
 ## Patterns (Not Just APIs)
 
@@ -41,3 +47,8 @@ with the "Use Instead" column.
 | `Texture2D` in shader parameters | `Texture` base type | Changed in 4.4 |
 | Manual post-process viewport chains | `Compositor` + `CompositorEffect` | Structured post-processing (4.3+) |
 | GodotPhysics3D for new projects | Jolt Physics 3D | Default since 4.6; better stability |
+| Hand-rolled touch joystick Control | `VirtualJoystick` node | Built-in since 4.7 with Fixed / Dynamic / Following modes |
+| SubViewport + shader just to paint into a texture | `DrawableTexture2D` | Simpler API for drawing into textures (4.7). SubViewport still correct for rendering a scene to texture. |
+| `await some_signal` between `tween_*` steps | `Tween.tween_await(signal)` | Keeps the sequence inside one Tween (4.7) |
+| Animating `position`/`scale` on a Control for visual feedback | `Control.offset_transform_*` properties | Visual-only; does not disturb container layout (4.7) |
+| Relying on implicit `null` return in typed overrides | Explicit `return` | Required by GDScript since 4.7 |

@@ -1,8 +1,26 @@
 # Godot Animation — Quick Reference
 
-Last verified: 2026-02-12 | Engine: Godot 4.6
+Last verified: 2026-09-18 | Engine: Godot 4.7.1
 
 ## What Changed Since ~4.3 (LLM Cutoff)
+
+### 4.7 Changes
+- **`Tween.tween_await(signal)`**: pause a tween sequence until a signal is emitted
+- **`Animation.length`** metadata is `double` (C# only)
+- **`AnimationNodeBlendSpace1D/2D.add_blend_point()`** gains optional `name`
+- **`LookAtModifier3D.relative`** default `true` → `false` (3D)
+- Animation editor: collapsible track groups with aggregate keys
+
+### Tween Waiting on a Signal (4.7 — NEW)
+```gdscript
+# Pet reaction: bounce, wait for the beep to finish, then clear the need icon.
+func play_reaction(need: StringName) -> void:
+    var tween := create_tween()
+    tween.tween_property(%PetSprite, "position:y", -4.0, 0.08).as_relative()
+    tween.tween_property(%PetSprite, "position:y", 4.0, 0.08).as_relative()
+    tween.tween_await(%Beep.finished)
+    tween.tween_callback(_clear_need.bind(need))
+```
 
 ### 4.6 Changes
 - **IK system fully restored**: Complete inverse kinematics for 3D skeletons

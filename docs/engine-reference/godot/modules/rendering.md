@@ -1,8 +1,27 @@
 # Godot Rendering — Quick Reference
 
-Last verified: 2026-02-12 | Engine: Godot 4.6
+Last verified: 2026-09-18 | Engine: Godot 4.7.1
 
 ## What Changed Since ~4.3 (LLM Cutoff)
+
+### 4.7 Changes
+- **HDR output** on Windows, macOS, iOS, visionOS, Linux/Wayland
+- **`DrawableTexture2D`**: simple draw-into-texture API (alternative to SubViewport for painting)
+- **`GradientTexture2D`** conic fill mode
+- **Nearest-neighbor 3D viewport scaling** (3D only)
+- **`CanvasItem` line drawing no longer adds AA feather** — lines look thinner
+- **`LinearToSRGB` visual shader node** no longer clamps to [0,1] on Mobile/Forward+
+- **`get_format()`** moved up to `Texture2D`
+- **`AreaLight3D`**, clearcoat improvements, Vulkan subsampled images (3D/XR only)
+
+### Low-Res LCD Layer (project pattern — evaluate in prototype)
+```
+Option A (proven): SubViewport at LCD resolution (e.g. 64x48) → SubViewportContainer
+                   with texture_filter = NEAREST; pixel-grid overlay via shader.
+Option B (4.7):    DrawableTexture2D as the LCD surface if all pet/UI drawing is
+                   done via draw_* calls rather than a scene tree.
+Decision goes in an ADR after /prototype device-button-feel.
+```
 
 ### 4.6 Changes
 - **D3D12 is the default rendering backend on Windows** (was Vulkan)
