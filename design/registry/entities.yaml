@@ -37,7 +37,7 @@
 #   Each entry: name, status, source, referenced_by[], attributes{}, added, revised
 
 version: 1
-last_updated: ""
+last_updated: "2026-09-18"
 
 # ─── ENTITIES ────────────────────────────────────────────────────────────────
 # Named game-world objects: enemies, NPCs, characters, factions, bosses.
@@ -106,7 +106,41 @@ items: []
 #   output_range[min, max], added
 # Optional: expression (the actual formula), notes
 
-formulas: []
+formulas:
+  - name: elapsed_seconds
+    status: active
+    source: design/gdd/time-service.md
+    referenced_by:
+      - design/gdd/time-service.md
+    variables:
+      - now_utc
+      - since_utc
+    output_range: [0, null]
+    expression: "max(0, now_utc - since_utc)"
+    notes: "Owned by Time Service's get_elapsed_seconds(). Never negative by
+      construction (clamps to 0 if since_utc is in the future). No upper bound
+      here — Offline Time Simulation applies its own MAX_OFFLINE cap on top of
+      this value; that cap is a separate, downstream constant, not part of
+      this formula. Consumed by Need System and Offline Time Simulation."
+    added: 2026-09-18
+    revised: ""
+
+  - name: is_new_calendar_day
+    status: active
+    source: design/gdd/time-service.md
+    referenced_by:
+      - design/gdd/time-service.md
+    variables:
+      - now_utc
+      - last_utc
+    output_range: [false, true]
+    expression: "local_date(now_utc) != local_date(last_utc)"
+    notes: "Owned by Time Service's is_new_calendar_day(). Compares local
+      calendar dates (device time zone), not a rolling 24-hour window — a
+      midnight-crossing gap of minutes counts as a new day. Consumed by
+      Life Stage & Growth (check-in-day growth arc) and Daily Notification."
+    added: 2026-09-18
+    revised: ""
 
 # Example:
 #

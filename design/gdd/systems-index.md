@@ -17,7 +17,7 @@ Pocket Pal is mechanically small by design: a skeuomorphic three-button device w
 
 | # | System Name | Category | Priority | Status | Design Doc | Depends On |
 |---|-------------|----------|----------|--------|------------|------------|
-| 1 | Time Service (inferred) | Core | MVP | Not Started | — | — |
+| 1 | Time Service (inferred) | Core | MVP | Designed | design/gdd/time-service.md | — |
 | 2 | Pet Definition Data (inferred) | Core | MVP | Not Started | — | — |
 | 3 | Device Frame & Button Input | Gameplay | MVP | Not Started | — | — |
 | 4 | Need System | Gameplay | MVP | Not Started | — | Time Service, Pet Definition Data |
@@ -158,10 +158,10 @@ Effort: S = 1 session, M = 2–3 sessions, L = 4+ sessions. Systems 1–2 are in
 | Metric | Count |
 |--------|-------|
 | Total systems identified | 16 |
-| Design docs started | 0 |
+| Design docs started | 1 |
 | Design docs reviewed | 0 |
 | Design docs approved | 0 |
-| MVP systems designed | 0/10 |
+| MVP systems designed | 1/10 |
 | Vertical Slice systems designed | 0/3 |
 
 ---

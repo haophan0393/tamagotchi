@@ -3,7 +3,7 @@
 *Updated: 2026-09-18*
 
 ## Current Task
-/design-review game-concept.md COMPLETE (NEEDS REVISION → revised same session, 6 blockers + 8 recommended applied). /map-systems COMPLETE — design/gdd/systems-index.md written (16 systems, 10 MVP). Next: /design-system Time Service (first in design order) or /gate-check systems-design.
+/design-system time-service — COMPLETE (see below). /design-system pet-definition-data — STARTED but PAUSED before skeleton creation (user asked to continue in a fresh session; no file written yet, nothing to resume mid-section). On resume: run `/design-system pet-definition-data` again — Phase 2 context gathering will re-read game-concept.md + systems-index.md; the context summary already established: Foundation layer, no upstream deps, depended on by 6 direct (8 total incl. transitive) systems — the single biggest bottleneck GDD in the project ("8 systems depend on its schema — a late schema change ripples everywhere," per systems-index.md High-Risk table). Feasibility brief already covered: Godot `Resource`/`.tres` for species/forms/thresholds/palettes as data, `duplicate_deep()` (4.5+) as a MEDIUM-risk item if nested resources need runtime deep-copy, no ADRs yet, no engine knowledge gaps blocking. MVP content volume already known: 1 shell, 1 species, egg+baby+child+2 adult forms (~6 sprites × ~6 animations), 4 care actions, 1 mini-game.
 
 ## Prototype: device-button-feel
 - **Hypothesis:** If the player taps the three round device buttons, each press will feel tactile and satisfying — confirmed if a first-time tester presses a button repeatedly/playfully without being asked to, within the first 30 seconds.
@@ -27,7 +27,9 @@
 - [x] /map-systems — systems-index.md written (16 systems; order: Time Service → Pet Definition Data → Device Frame → Need → Save → Growth → LCD → Care → Offline Sim → Pet Animation → …)
 - [ ] /gate-check systems-design (optional director sign-off)
 - [ ] /art-bible (Candy Gadget anchor)
-- [ ] /design-system time-service (or /map-systems next)
+- [x] /design-system time-service — COMPLETE (design/gdd/time-service.md, Status: Designed, pending review)
+- [ ] /design-review design/gdd/time-service.md (run in a fresh session)
+- [~] /design-system pet-definition-data — PAUSED before skeleton creation (context/feasibility brief already given, no file written)
 
 ## Key Decisions
 - Concept: colorful skeuomorphic Tamagotchi device on phone; 3 round buttons + boxy LCD
@@ -43,8 +45,10 @@
 - Platform: iOS/Android portrait. Engine: Godot 4.7.1 (machine install, Homebrew), GDScript, gdUnit4. Solo, first game, ~7–8 weeks to v1.0
 
 ## Files
+- design/gdd/time-service.md (COMPLETE — Designed, pending review)
+- design/registry/entities.yaml (2 formulas registered: elapsed_seconds, is_new_calendar_day)
 - design/gdd/game-concept.md (revised 2026-09-18)
-- design/gdd/systems-index.md
+- design/gdd/systems-index.md (Time Service marked Designed, 1/10 MVP)
 - design/gdd/reviews/game-concept-review-log.md
 - production/stage.txt (Concept)
 - production/review-mode.txt (solo)
