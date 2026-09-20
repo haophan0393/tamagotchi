@@ -1,9 +1,11 @@
 # Active Session State
 
-*Updated: 2026-09-18*
+*Updated: 2026-09-19*
 
 ## Current Task
-/design-system time-service — COMPLETE (see below). /design-system pet-definition-data — STARTED but PAUSED before skeleton creation (user asked to continue in a fresh session; no file written yet, nothing to resume mid-section). On resume: run `/design-system pet-definition-data` again — Phase 2 context gathering will re-read game-concept.md + systems-index.md; the context summary already established: Foundation layer, no upstream deps, depended on by 6 direct (8 total incl. transitive) systems — the single biggest bottleneck GDD in the project ("8 systems depend on its schema — a late schema change ripples everywhere," per systems-index.md High-Risk table). Feasibility brief already covered: Godot `Resource`/`.tres` for species/forms/thresholds/palettes as data, `duplicate_deep()` (4.5+) as a MEDIUM-risk item if nested resources need runtime deep-copy, no ADRs yet, no engine knowledge gaps blocking. MVP content volume already known: 1 shell, 1 species, egg+baby+child+2 adult forms (~6 sprites × ~6 animations), 4 care actions, 1 mini-game.
+/design-system pet-definition-data — IN PROGRESS. Skeleton created at design/gdd/pet-definition-data.md (2026-09-19). Sections done: A Overview, B Player Fantasy (anchor: Discovery), C Detailed Rules (palette per species + form override; uniform animation core set, egg exempt; ordered share-threshold form rules + default; care restore/sad thresholds per species; MVP arc egg0/baby3/child4/adult2 ≈9 days; species bloop, forms bloop_playful/bloop_cozy provisional). Current section: D Formulas. Scope decision: PDD owns identity + ALL pet tunables (decay rates, stage thresholds, form rule table, palettes, animations). Review mode: solo. Context/feasibility brief given: Foundation layer, no upstream deps, 6 direct dependents (all undesigned) — highest fan-out GDD in the project; Godot Resource/.tres as data, definitions immutable/shared-by-reference, typed Dictionary (4.4) + duplicate_deep (4.5) flagged MEDIUM knowledge gaps; storage format/schema versioning → ADR.
+
+/design-review design/gdd/time-service.md — DONE 2026-09-19: NEEDS REVISION (6 blocking, 7 recommended; scope S). User accepted as-is; systems-index marked "Approved (as-is)"; log at design/gdd/reviews/time-service-review-log.md. Open blocking items to re-check when Save & Persistence / Life Stage & Growth / Offline Sim are designed: bounded timestamp domain (int64 wrap), anchor-timestamp data contract, false DST claim, AC #2 wall-clock sleep, AC #9 unfalsifiable → CI lint gate, section rename "Detailed Rules".
 
 ## Prototype: device-button-feel
 - **Hypothesis:** If the player taps the three round device buttons, each press will feel tactile and satisfying — confirmed if a first-time tester presses a button repeatedly/playfully without being asked to, within the first 30 seconds.
@@ -28,8 +30,8 @@
 - [ ] /gate-check systems-design (optional director sign-off)
 - [ ] /art-bible (Candy Gadget anchor)
 - [x] /design-system time-service — COMPLETE (design/gdd/time-service.md, Status: Designed, pending review)
-- [ ] /design-review design/gdd/time-service.md (run in a fresh session)
-- [~] /design-system pet-definition-data — PAUSED before skeleton creation (context/feasibility brief already given, no file written)
+- [x] /design-review design/gdd/time-service.md — NEEDS REVISION, accepted as-is (2026-09-19)
+- [~] /design-system pet-definition-data — IN PROGRESS (skeleton created 2026-09-19; next: Section A Overview)
 
 ## Key Decisions
 - Concept: colorful skeuomorphic Tamagotchi device on phone; 3 round buttons + boxy LCD
@@ -45,7 +47,9 @@
 - Platform: iOS/Android portrait. Engine: Godot 4.7.1 (machine install, Homebrew), GDScript, gdUnit4. Solo, first game, ~7–8 weeks to v1.0
 
 ## Files
-- design/gdd/time-service.md (COMPLETE — Designed, pending review)
+- design/gdd/time-service.md (Approved as-is 2026-09-19 — 6 review blockers still open, see review log)
+- design/gdd/pet-definition-data.md (IN PROGRESS — skeleton only)
+- design/gdd/reviews/time-service-review-log.md
 - design/registry/entities.yaml (2 formulas registered: elapsed_seconds, is_new_calendar_day)
 - design/gdd/game-concept.md (revised 2026-09-18)
 - design/gdd/systems-index.md (Time Service marked Designed, 1/10 MVP)
