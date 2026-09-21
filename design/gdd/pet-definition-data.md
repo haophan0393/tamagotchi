@@ -1,8 +1,8 @@
 # Pet Definition Data
 
-> **Status**: In Design
+> **Status**: Designed (pending review)
 > **Author**: user + agents
-> **Last Updated**: 2026-09-19
+> **Last Updated**: 2026-09-21
 > **Implements Pillar**: Pillar 5: Simple Core, Infinite Shells (primary); Pillar 4: Color Is the Character (palettes); indirectly Pillar 2: Never Guilt, Always Welcome (thresholds must never encode punishment)
 > **Creative Director Review (CD-GDD-ALIGN)**: Skipped — Solo mode
 
@@ -86,19 +86,88 @@ Provisional assumptions flagged for downstream GDDs: the 32×32 sprite constant 
 
 ## Formulas
 
-[To be designed]
+### care_action_share
+
+The `care_action_share` formula is defined as:
+
+`care_action_share = action_count / total_actions_in_window`
+
+**Variables:**
+| Variable | Symbol | Type | Range | Description |
+|----------|--------|------|-------|-------------|
+| action_count | a | int | 0 to total_actions_in_window | Count of times one specific care action (feed/clean/play/lights) was performed within the rolling window |
+| total_actions_in_window | n | int | ≥ 0 | Total count of all care actions of any kind performed within the rolling `window_days` check-in days |
+
+**Output Range:** 0.0 to 1.0 when `total_actions_in_window > 0`. Undefined at `n = 0` (a window with zero care actions) — Life Stage & Growth's empty-window rule resolves what happens then; PDD's schema only guarantees what the number means when it exists, per Core Rule 11.
+**Example:** `window_days = 5` (bloop's MVP table). Across the window the player performed 20 total care actions, 9 of them `play`. `care_action_share(play) = 9 / 20 = 0.45`. Checked against the MVP rule (`play ≥ 0.40`), this window's value would satisfy rule 1 (→ `bloop_playful`) — making that comparison is Life Stage & Growth's job; this formula only defines the number being compared.
+
+### total_arc_days
+
+The `total_arc_days` formula is defined as:
+
+`total_arc_days = baby.days_to_advance + child.days_to_advance + adult_days_to_nearly_grown`
+
+**Variables:**
+| Variable | Symbol | Type | Range | Description |
+|----------|--------|------|-------|-------------|
+| baby.days_to_advance | b | int | ≥ 0 | Check-in days spent in Baby stage before advancing to Child |
+| child.days_to_advance | c | int | ≥ 0 | Check-in days spent in Child stage before advancing to Adult (form chosen here) |
+| adult_days_to_nearly_grown | g | int | ≥ 1 | Check-in days spent as Adult before reaching Nearly Grown |
+
+`egg.days_to_advance` is fixed at 0 by convention (Core Rule 5) and excluded — the egg hatches on the player's first press, not on elapsed days. Nearly Grown → Graduate is a player press with no day cost and is also excluded.
+
+**Output Range:** No hard min/max is enforced by the schema — Core Rule 12's load-time validation does not check this value, because the 7–10 check-in day band is a design constraint from `game-concept.md`, not a data-shape constraint. A species definition producing a value outside that band still loads successfully; it should instead be caught as a tuning review item (see Tuning Knobs).
+**Example:** bloop = 3 (baby) + 4 (child) + 2 (adult_days_to_nearly_grown) = **9 check-in days**, inside the concept's 7–10 band.
+
+*`systems-designer` not consulted — Solo mode. Review manually before production.*
 
 ## Edge Cases
 
-[To be designed]
+- **If `total_actions_in_window` = 0** (no care actions performed at all within the window at child→adult evaluation time): `care_action_share` is undefined for every action (division by zero). PDD does not resolve this — Core Rule 11 already assigns the empty-window case to Life Stage & Growth. This GDD's only claim is that the formula has no defined value at n=0; Growth's GDD must state what it falls back to (almost certainly `default_form_id`).
+- **If a `FormRule`'s `ShareCondition`s are individually valid but jointly impossible** (e.g., two ANDed conditions on different actions whose `min_share`s sum above 1.0): the rule becomes permanently unreachable — no window can ever satisfy it, so evaluation silently falls through to the next rule or the default every time. Load-time validation (Core Rule 12) checks shape, not reachability, so this is an authoring footgun rather than a load failure. Resolution: this GDD flags the risk; a future asset-audit or unit test on the rule table (see Acceptance Criteria) should catch it, not Core Rule 12.
+- **If `default_form_id` refers to a form later marked `retired: true`**: the species still passes load validation (Core Rule 12 only requires *some* non-retired adult form to exist, not that the default specifically is one), but any pet that falls through to default now graduates into a retired form. Resolution: authoring convention, not load-enforced — never retire the form a species' `default_form_id` points to without first repointing `default_form_id` to a live form.
+- **If `window_days` exceeds the Child stage's `days_to_advance`** (e.g., `window_days = 5` but `child.days_to_advance = 4`): the rolling window, evaluated at the moment of the Child→Adult transition, necessarily includes care actions performed during Baby. This is intentional, not a bug — the window is calendar/check-in-day based, not stage-scoped, and Life Stage & Growth's care-history log is not partitioned by stage. PDD does not validate `window_days` against stage lengths for this reason; a designer who wants the window confined to one stage sets `window_days ≤ child.days_to_advance` manually.
+- **If a saved pet references a species id no longer present in the catalog** (removed in a content update): PDD holds no runtime state to lose, so there is nothing here to resolve — this is Save & Persistence's edge case, already deferred to it by Core Rule 12. PDD's only relevant guarantee is Core Rule 2: ids are never renamed or reused, so "missing" can only happen via deliberate removal, never silent rename collision.
+- **If a form is both `hidden: true` and `retired: true`**: the album shows a permanent silhouette for a form that can now never be earned to reveal it. This is accepted, not resolved — Core Rule 2 requires the id survive forever once shipped, but no pillar promises every hidden form is eventually revealed. Authoring guidance: only retire a hidden form if it's acceptable for it to stay silhouetted permanently.
+
+*`systems-designer` not consulted — Solo mode. Review manually before production.*
 
 ## Dependencies
 
-[To be designed]
+Pet Definition Data has no upstream dependencies — it is a Foundation-layer system, loaded first, that reads nothing from any other game system. It has the widest fan-out in the project: every dependent below is a **hard** dependency — none can function without PDD's data; there is no "enhanced by, works without" case for a pure content schema.
+
+| Dependent | Interface (reads) | Hard/Soft | Notes |
+|---|---|---|---|
+| Need System | `NeedProfile` (decay_per_hour, sad_threshold, floor) | Hard | Applies decay; PDD never ticks |
+| Care Actions | `CareProfile.restore_amount`; animation name to request | Hard | Action→need map fixed in code |
+| Life Stage & Growth | `days_to_advance` per stage, `adult_days_to_nearly_grown`, `FormRuleTable` | Hard | Owns care-history log & rule evaluation |
+| Save & Persistence | species/form **ids** only | Hard | Must handle a missing id (see Edge Cases) |
+| LCD Screen Renderer | active palette, sprite frame size | Hard | Renders within 4–8 color constraint |
+| Pet Animation & Reactions | `sprite_set` by stage/form, animation names, `fps`, `loop` | Hard | Required-name contract, no fallback |
+| Graduation & Album *(Vertical Slice)* | `display_name`, `hidden`, `retired`, form sprite | Hard | Must resolve retired ids forever |
+
+**Correction needed**: `design/gdd/systems-index.md`'s dependency map omits the Graduation & Album → Pet Definition Data edge (it currently lists only Life Stage & Growth, Save & Persistence, and Pet Animation & Reactions as Graduation's dependencies). This GDD has specified the direct read since Section C was written; Phase 5d of this session adds the missing edge to the systems index rather than changing this GDD's contract.
+
+Nothing writes to Pet Definition Data at runtime (Core Rule 3) — every dependency listed here is strictly one-directional, PDD → dependent.
 
 ## Tuning Knobs
 
-[To be designed]
+Since PDD's whole purpose is designer-adjustable content, nearly every numeric field from Sections C/D is a tuning knob. The table below defines the knob *classes*, their safe ranges, and what breaks at the extremes — the reference a designer tunes against, not the current `bloop` values (those stay in Core Rules as the shipped example).
+
+| Knob | Scope | Safe Range | Too Low | Too High | Interacts With |
+|---|---|---|---|---|---|
+| `decay_per_hour` | Per need, per species | float > 0, tuned so ~24h decay ≈ one comfortable check-in | Pet never needs attention — breaks the daily-ritual loop (concept's core hypothesis) | Needs crash before a player's next check-in — breaks Pillar 2's "one check-in a day is enough" promise | `sad_threshold`, `floor`, Offline Time Sim's `MAX_OFFLINE` cap (owned downstream) |
+| `sad_threshold` | Per need, per species | int 0–100, well below the "just decayed a bit" range | Sad state barely ever shows — need feedback loop feels inert | Pet reads as sad almost constantly — contradicts "Never Guilt" | `decay_per_hour`, `floor` |
+| `floor` | Per need, per species | int ≥ 0, default 0, must stay well below `sad_threshold` | N/A (0 is the safe default) | A floor at or above `sad_threshold` doesn't block care from working, but a floor near 100 makes decay nearly invisible — the need never meaningfully drops | `decay_per_hour`, `sad_threshold` |
+| `restore_amount` | Per care action, per species | int 1–100, high enough to clear one need from sad back to content in a single press | Care feels ineffective — player presses but sees no payoff, breaking Pillar 3's "two minutes of joy" | 100 always fully restores regardless of how decayed — acceptable here, since instant full relief matches the no-punishment pillar | `decay_per_hour`, `sad_threshold` |
+| `days_to_advance` | Per stage, per species | int ≥ 0; 0 reserved for egg only (Core Rule 5's convention) | A non-egg stage at 0 instantly skips that stage — almost certainly an authoring mistake, not a valid design choice | Pushes `total_arc_days` outside the concept's 7–10 day band (see Formulas) | `total_arc_days`, `window_days` |
+| `adult_days_to_nearly_grown` | Per species | int ≥ 1 | 1 gives almost no time to enjoy the chosen adult form before graduation looms | A long adult stage back-loads the whole arc's pacing | `total_arc_days` |
+| `window_days` | Per species (FormRuleTable) | int ≥ 1; recommended ≈ `child.days_to_advance` | A 1-day window makes form selection twitchy — one great/bad day flips the outcome, undermining "style" as the read signal | A window much longer than `child.days_to_advance` pulls in Baby-stage actions the player didn't think of as "shaping the adult" (see Edge Cases) | `days_to_advance` (child), `care_action_share` |
+| `min_share` | Per `ShareCondition` | float 0.0–1.0 | Near 0 — almost any care pattern satisfies the rule, so the form becomes a near-default and Discovery collapses | Near 1.0, or multiple ANDed conditions whose values jointly exceed 1.0 — the rule becomes unreachable (see Edge Cases) | Other `ShareCondition`s in the same rule; `care_action_share` |
+| Palette size | Per species/form-override | 4–8 colors (hard-enforced at load, Core Rule 12) | 4 — least shading fidelity for the pixel art | 8 — the ceiling exists to protect LCD Screen Renderer's readability budget ("clarity is the screen's job") | LCD Screen Renderer's palette budget |
+| `hidden` / `retired` | Per form | boolean | — | Retiring a form still referenced by `default_form_id` or left `hidden` produces the failure modes in Edge Cases | `default_form_id`, album resolution |
+
+*`systems-designer` not consulted for this section — Solo mode; knobs derived directly from Sections C/D. Review manually before production.*
 
 ## Visual/Audio Requirements
 
@@ -110,8 +179,34 @@ Provisional assumptions flagged for downstream GDDs: the 32×32 sprite constant 
 
 ## Acceptance Criteria
 
-[To be designed]
+- **GIVEN** the compiled game code, **WHEN** inspecting the need/action/stage enums, **THEN** exactly four needs (`hunger`, `cleanliness`, `fun`, `sleep`), four care actions (`feed`, `clean`, `play`, `lights`), and four life stages (`egg`, `baby`, `child`, `adult`) exist and are not sourced from data (Core Rule 1).
+- **GIVEN** a species or adult form definition, **WHEN** the catalog loads it, **THEN** its `id` is a snake_case `StringName` that is unique across the whole catalog within its type (Core Rule 2).
+- **GIVEN** a loaded species definition, **WHEN** any two consumer systems read it, **THEN** both receive the same shared reference and no consumer can mutate any field on it (Core Rule 3).
+- **GIVEN** a species definition file, **WHEN** validated, **THEN** it contains exactly one `id`, `display_name`, `palette`, three `StageDefinition`s (egg/baby/child), ≥1 `AdultFormDefinition`, one `FormRuleTable`, one `NeedProfile`, one `CareProfile`, and `adult_days_to_nearly_grown ≥ 1` (Core Rule 4).
+- **GIVEN** the `bloop` species definition, **WHEN** inspected, **THEN** `egg.days_to_advance = 0`, `baby.days_to_advance = 3`, `child.days_to_advance = 4`, `adult_days_to_nearly_grown = 2` (Core Rule 5).
+- **GIVEN** an adult form definition, **WHEN** validated, **THEN** it has `id`, `display_name`, `sprite_set`, an optional `palette_override`, `hidden: bool`, and `retired: bool`; the adult day threshold is read from the species, never the form (Core Rule 6).
+- **GIVEN** a baby, child, or adult form `sprite_set`, **WHEN** validated against Core Rule 7, **THEN** all core-set animation names are present (`idle_content`, `idle_sad`, `greeting`, `react_feed`, `react_clean`, `react_play`, `react_lights`, `stage_up`); adult forms additionally have `nearly_grown` and `graduate`; the egg's `sprite_set` requires only `idle` and `hatch`; any missing required name fails validation with no fallback to `idle`.
+- **GIVEN** a palette, **WHEN** its size is outside 4–8 colors, **THEN** load-time validation rejects the species — hard error in dev builds, species excluded from `get_all_species()` plus a logged error in release (Core Rules 8, 12).
+- **GIVEN** a `NeedProfile` entry, **WHEN** validated, **THEN** `decay_per_hour > 0`, `sad_threshold` is in `[0, 100]`, and `floor ≥ 0` (Core Rule 9).
+- **GIVEN** a `CareProfile` entry, **WHEN** validated, **THEN** `restore_amount` is in `[1, 100]` (Core Rule 10).
+- **GIVEN** a `FormRuleTable`, **WHEN** validated, **THEN** `window_days ≥ 1`, every `form_id` referenced (in rules and `default_form_id`) exists among that species' adult forms, and every `min_share` is in `[0.0, 1.0]` (Core Rule 11).
+- **GIVEN** a `FormRuleTable` read back from the catalog, **WHEN** its rules are iterated, **THEN** they come back in the exact authored order — so any consumer implementing "first match wins" (Life Stage & Growth) has a well-defined order to walk (Core Rule 11).
+- **GIVEN** a species definition violating any Core Rule 12 constraint (duplicate id, dangling `form_id`, missing default, zero non-retired adult forms, out-of-range `min_share`, `window_days < 1`, a missing required animation, wrong palette size, or an out-of-range numeric field), **WHEN** the catalog loads it, **THEN** a dev build hard-errors and a release build excludes the species from `get_all_species()` and logs an error (Core Rule 12).
+- **GIVEN** a loaded catalog, **WHEN** calling `get_species(id)` / `get_form(id)` with an unknown id, **THEN** each returns a defined "not found" result (null or explicit error), never a silent default; and `get_all_species()` excludes any species marked `retired` (Core Rule 13).
+- **GIVEN** `action_count = 9` and `total_actions_in_window = 20` (the Formulas worked example), **WHEN** `care_action_share` is computed per its formula definition, **THEN** the result equals `0.45` — a pure-math contract test, independently unit-testable regardless of which system (Life Stage & Growth) invokes it.
+- **GIVEN** `bloop`'s stage thresholds (`baby=3`, `child=4`, `adult_days_to_nearly_grown=2`), **WHEN** `total_arc_days` is computed, **THEN** the result equals `9`, inside the concept's 7–10 day band; a balance smoke check computing this for any species definition outside `[7, 10]` produces a warning for designer review, not a load failure (per Config/Data test evidence in `coding-standards.md`).
+- **GIVEN** the MVP catalog (1 species) at app boot, **WHEN** it is parsed and validated, **THEN** loading completes before the first frame is presented — this is a one-time boot cost outside the 16.6 ms per-frame budget, not a per-frame concern.
+
+*`qa-lead` not consulted — Solo mode. Review manually before production.*
 
 ## Open Questions
 
-[To be designed]
+| # | Question | Owner | Target Resolution |
+|---|---|---|---|
+| 1 | Storage format & schema versioning strategy (Resource/.tres vs. JSON vs. custom binary; how a saved species catalog migrates across content updates) | technical-director | Architecture phase, as an ADR — before Save & Persistence is implemented |
+| 2 | Catalog wiring & injection mechanics (how definitions are loaded and exposed to consumers — Autoload singleton vs. injected service) | godot-specialist | Same ADR pass as #1 |
+| 3 | 32×32 sprite frame size is provisional, borrowed from LCD Screen Renderer's expected scope, but that GDD's own rendering approach (SubViewport+shader vs. `DrawableTexture2D`) is still unvalidated (systems-index High-Risk Systems) | LCD Screen Renderer design session | Confirm or replace this constant when that GDD's Formulas section is written |
+| 4 | The 0–100 need scale is assumed here but is properly Need System's own scale to own | Need System design session | Confirm at that GDD's Detailed Rules — next MVP system in the design order |
+| 5 | Empty-window and tie-break rules for form selection (Core Rule 11 defers both to Life Stage & Growth) | Life Stage & Growth design session | Resolve in that GDD's Core Rules / Edge Cases |
+| 6 | No tooling catches an unreachable `FormRule` (jointly-impossible `min_share`s) at load time — should this be a load-time check, an asset-audit rule, or a unit test fixture? | qa-lead / devops-engineer | Decide before any `FormRuleTable` beyond the 1-rule MVP table ships (v1.0's 4+ forms) |
+| 7 | **Self-flagged gap**: Core Rule 13 implies species carry a `retired` flag, but Core Rule 4's species field list never declares one | this GDD (next revision pass) | Resolve before Save & Persistence or Device Shells is implemented — likely a one-line addendum to Core Rule 4, not a new design session |

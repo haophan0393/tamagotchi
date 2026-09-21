@@ -37,7 +37,7 @@
 #   Each entry: name, status, source, referenced_by[], attributes{}, added, revised
 
 version: 1
-last_updated: "2026-09-18"
+last_updated: "2026-09-21"
 
 # ─── ENTITIES ────────────────────────────────────────────────────────────────
 # Named game-world objects: enemies, NPCs, characters, factions, bosses.
@@ -48,7 +48,35 @@ last_updated: "2026-09-18"
 # Attribute fields: any key stats that could appear in another GDD
 #   (health, damage, drops, faction, etc.)
 
-entities: []
+entities:
+  - name: bloop
+    status: active
+    source: design/gdd/pet-definition-data.md
+    referenced_by:
+      - design/gdd/pet-definition-data.md
+    species_id: bloop
+    stages:
+      egg: { days_to_advance: 0 }
+      baby: { days_to_advance: 3 }
+      child: { days_to_advance: 4 }
+    adult_days_to_nearly_grown: 2
+    total_arc_days: 9
+    forms:
+      - bloop_playful
+      - bloop_cozy
+    form_rule_table:
+      window_days: 5
+      rules:
+        - "bloop_playful if play_share >= 0.40"
+      default_form: bloop_cozy
+    notes: "MVP provisional species/content — first pet defined. Two adult
+      forms only; Discovery aesthetic does not land at this scope per
+      game-concept.md (only becomes meaningful at v1.0's 4+ forms). Consumed
+      by Life Stage & Growth (thresholds, rule table), Need System (via its
+      own NeedProfile — not itself registered, internal to PDD's schema),
+      Save & Persistence and Graduation & Album (ids only)."
+    added: 2026-09-21
+    revised: ""
 
 # Example (remove when first real entry is added):
 #
@@ -140,6 +168,43 @@ formulas:
       midnight-crossing gap of minutes counts as a new day. Consumed by
       Life Stage & Growth (check-in-day growth arc) and Daily Notification."
     added: 2026-09-18
+    revised: ""
+
+  - name: care_action_share
+    status: active
+    source: design/gdd/pet-definition-data.md
+    referenced_by:
+      - design/gdd/pet-definition-data.md
+    variables:
+      - action_count
+      - total_actions_in_window
+    output_range: [0.0, 1.0]
+    expression: "action_count / total_actions_in_window"
+    notes: "Owned by Pet Definition Data's FormRuleTable schema (Core Rule 11)
+      as the definition of what a ShareCondition.min_share compares against.
+      Undefined at total_actions_in_window = 0 — Life Stage & Growth owns
+      evaluating the table and resolving the empty-window case, not PDD.
+      Consumed by Life Stage & Growth's child->adult form selection."
+    added: 2026-09-21
+    revised: ""
+
+  - name: total_arc_days
+    status: active
+    source: design/gdd/pet-definition-data.md
+    referenced_by:
+      - design/gdd/pet-definition-data.md
+    variables:
+      - baby.days_to_advance
+      - child.days_to_advance
+      - adult_days_to_nearly_grown
+    output_range: [0, null]
+    expression: "baby.days_to_advance + child.days_to_advance + adult_days_to_nearly_grown"
+    notes: "Rollup used to check a species' growth arc against game-concept.md's
+      7-10 check-in day target band. Not load-time enforced (Core Rule 12
+      doesn't check it) — a recommended-range smoke check only. egg and the
+      nearly-grown->graduate step contribute 0 by design (see GDD Formulas
+      section). bloop = 3 + 4 + 2 = 9."
+    added: 2026-09-21
     revised: ""
 
 # Example:

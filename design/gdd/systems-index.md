@@ -2,7 +2,7 @@
 
 > **Status**: Draft
 > **Created**: 2026-09-18
-> **Last Updated**: 2026-09-19
+> **Last Updated**: 2026-09-21
 > **Source Concept**: design/gdd/game-concept.md (revised 2026-09-18 after `/design-review`)
 
 ---
@@ -18,7 +18,7 @@ Pocket Pal is mechanically small by design: a skeuomorphic three-button device w
 | # | System Name | Category | Priority | Status | Design Doc | Depends On |
 |---|-------------|----------|----------|--------|------------|------------|
 | 1 | Time Service (inferred) | Core | MVP | Approved (as-is) | design/gdd/time-service.md | — |
-| 2 | Pet Definition Data (inferred) | Core | MVP | Not Started | — | — |
+| 2 | Pet Definition Data (inferred) | Core | MVP | In Review (NEEDS REVISION) | design/gdd/pet-definition-data.md | — |
 | 3 | Device Frame & Button Input | Gameplay | MVP | Not Started | — | — |
 | 4 | Need System | Gameplay | MVP | Not Started | — | Time Service, Pet Definition Data |
 | 5 | Save & Persistence | Persistence | MVP | Not Started | — | Time Service, Pet Definition Data |
@@ -90,7 +90,7 @@ Audio is folded into Device Frame & Button Input (sensory feedback) — the game
 1. Care Actions — depends on: Need System, Device Frame & Button Input, Pet Definition Data, Life Stage & Growth (care-history log)
 2. Offline Time Simulation — depends on: Time Service, Need System, Save & Persistence
 3. Pet Animation & Reactions — depends on: LCD Screen Renderer, Pet Definition Data, Need System, Care Actions, Life Stage & Growth, Offline Time Simulation
-4. Graduation & Album — depends on: Life Stage & Growth, Save & Persistence, Pet Animation & Reactions
+4. Graduation & Album — depends on: Life Stage & Growth, Save & Persistence, Pet Animation & Reactions, Pet Definition Data (reads display_name, hidden, retired, form sprite directly for the album — edge added 2026-09-21 per pet-definition-data.md Section C/F, previously omitted from this map)
 5. Daily Notification — depends on: Need System, Time Service
 
 ### Presentation Layer (wraps features)
@@ -158,10 +158,10 @@ Effort: S = 1 session, M = 2–3 sessions, L = 4+ sessions. Systems 1–2 are in
 | Metric | Count |
 |--------|-------|
 | Total systems identified | 16 |
-| Design docs started | 1 |
-| Design docs reviewed | 1 |
+| Design docs started | 2 |
+| Design docs reviewed | 2 |
 | Design docs approved | 1 |
-| MVP systems designed | 1/10 |
+| MVP systems designed | 2/10 |
 | Vertical Slice systems designed | 0/3 |
 
 ---

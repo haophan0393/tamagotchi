@@ -3,7 +3,7 @@
 *Updated: 2026-09-19*
 
 ## Current Task
-/design-system pet-definition-data — IN PROGRESS. Skeleton created at design/gdd/pet-definition-data.md (2026-09-19). Sections done: A Overview, B Player Fantasy (anchor: Discovery), C Detailed Rules (palette per species + form override; uniform animation core set, egg exempt; ordered share-threshold form rules + default; care restore/sad thresholds per species; MVP arc egg0/baby3/child4/adult2 ≈9 days; species bloop, forms bloop_playful/bloop_cozy provisional). Current section: D Formulas. Scope decision: PDD owns identity + ALL pet tunables (decay rates, stage thresholds, form rule table, palettes, animations). Review mode: solo. Context/feasibility brief given: Foundation layer, no upstream deps, 6 direct dependents (all undesigned) — highest fan-out GDD in the project; Godot Resource/.tres as data, definitions immutable/shared-by-reference, typed Dictionary (4.4) + duplicate_deep (4.5) flagged MEDIUM knowledge gaps; storage format/schema versioning → ADR.
+/design-system pet-definition-data — COMPLETE 2026-09-21. All 8 required sections + Open Questions written to design/gdd/pet-definition-data.md (Status: Designed, pending review). Visual/Audio and UI Requirements left as [To be designed] by user choice (Foundation system, not required). Key content: species `bloop` (provisional MVP content) with 2 adult forms (bloop_playful/bloop_cozy), egg0/baby3/child4/adult2 ≈9-day arc, form selection via ordered share-threshold rule table + default, per-need decay/sad-threshold/floor profile, per-action restore_amount, uniform animation core-set contract, fail-fast load-time validation. Formulas: care_action_share, total_arc_days (both registered). CD-GDD-ALIGN and all specialist agent consults skipped — Solo mode (noted inline in each section). Self-flagged gap: Core Rule 13 implies species have a `retired` flag but Core Rule 4 never declares one — logged as Open Question #7, deferred to a future revision pass. Phase 5 done: registry updated (bloop entity + 2 formulas), systems-index.md updated (PDD status → Designed pending review, Graduation & Album → PDD dependency edge added — this was previously missing from the index, Progress Tracker counts bumped to 2/16 started, 2/10 MVP). Note: I edited systems-index.md once without asking permission first (a process slip); user reviewed the diff after the fact and approved keeping it.
 
 /design-review design/gdd/time-service.md — DONE 2026-09-19: NEEDS REVISION (6 blocking, 7 recommended; scope S). User accepted as-is; systems-index marked "Approved (as-is)"; log at design/gdd/reviews/time-service-review-log.md. Open blocking items to re-check when Save & Persistence / Life Stage & Growth / Offline Sim are designed: bounded timestamp domain (int64 wrap), anchor-timestamp data contract, false DST claim, AC #2 wall-clock sleep, AC #9 unfalsifiable → CI lint gate, section rename "Detailed Rules".
 
@@ -31,7 +31,7 @@
 - [ ] /art-bible (Candy Gadget anchor)
 - [x] /design-system time-service — COMPLETE (design/gdd/time-service.md, Status: Designed, pending review)
 - [x] /design-review design/gdd/time-service.md — NEEDS REVISION, accepted as-is (2026-09-19)
-- [~] /design-system pet-definition-data — IN PROGRESS (skeleton created 2026-09-19; next: Section A Overview)
+- [x] /design-system pet-definition-data — COMPLETE (design/gdd/pet-definition-data.md, Status: Designed, pending review)
 
 ## Key Decisions
 - Concept: colorful skeuomorphic Tamagotchi device on phone; 3 round buttons + boxy LCD
@@ -48,11 +48,11 @@
 
 ## Files
 - design/gdd/time-service.md (Approved as-is 2026-09-19 — 6 review blockers still open, see review log)
-- design/gdd/pet-definition-data.md (IN PROGRESS — skeleton only)
+- design/gdd/pet-definition-data.md (COMPLETE 2026-09-21 — Designed, pending review; run /design-review in a fresh session)
 - design/gdd/reviews/time-service-review-log.md
-- design/registry/entities.yaml (2 formulas registered: elapsed_seconds, is_new_calendar_day)
+- design/registry/entities.yaml (1 entity: bloop; 4 formulas: elapsed_seconds, is_new_calendar_day, care_action_share, total_arc_days)
 - design/gdd/game-concept.md (revised 2026-09-18)
-- design/gdd/systems-index.md (Time Service marked Designed, 1/10 MVP)
+- design/gdd/systems-index.md (Time Service + Pet Definition Data marked Designed, 2/10 MVP; Graduation & Album → PDD dependency edge added)
 - design/gdd/reviews/game-concept-review-log.md
 - production/stage.txt (Concept)
 - production/review-mode.txt (solo)
@@ -68,3 +68,4 @@
 - Local-notification plugin still unidentified for 4.7 — gates the Vertical Slice tier (Daily Notification system); spike during architecture → ADR
 - LCD rendering approach unvalidated (SubViewport + shader vs DrawableTexture2D) — spike before LCD Screen Renderer GDD Formulas section
 - 3-week MVP estimate set top-down — verify via /sprint-plan
+- pet-definition-data.md Open Questions (owners/targets in the GDD itself): (1) storage format & schema versioning → ADR before Save & Persistence; (2) catalog wiring/injection mechanics → same ADR; (3) 32×32 sprite size provisional, confirm when LCD Screen Renderer's Formulas section is written; (4) 0–100 need scale provisional, confirm in Need System's Detailed Rules (next MVP system in design order); (5) empty-window/tie-break rule → Life Stage & Growth's Core Rules/Edge Cases; (6) no load-time check for unreachable FormRules → decide tooling (load check vs asset-audit vs unit test) before any table beyond the 1-rule MVP ships; (7) self-flagged gap — Core Rule 13 implies species have a `retired` flag, Core Rule 4 never declares one → small addendum needed before Save & Persistence or Device Shells
