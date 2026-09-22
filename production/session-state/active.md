@@ -1,6 +1,6 @@
 # Active Session State
 
-*Updated: 2026-09-22*
+*Updated: 2026-09-22 (post /test-setup)*
 
 ## Current Task
 
@@ -9,46 +9,64 @@
 The compressed plan (≈10–12 sessions to first production code, vs ~30+ on the full path):
 
 1. **DONE 2026-09-22** — close Pet Definition Data and Time Service as *Approved (accepted with notes)*; all open review blockers converted to Open Questions in the GDDs with owners and target resolution points.
-2. **IN PROGRESS** — `/test-setup` (Phase 1 done, see NEXT SESSION below) (tests/ scaffold + gdUnit4 runner + CI workflow) and the **LCD rendering spike** (SubViewport+shader vs `DrawableTexture2D`). These two answer the project's biggest technical unknowns and unblock the Time Service AC rewrites.
+2. **`/test-setup` DONE 2026-09-22** (project.godot + gdUnit4 v6.2.1 + runner + CI, 12/12 green). **LCD rendering spike still open** (SubViewport+shader vs `DrawableTexture2D`) — now the top technical unknown.
 3. Batch-author the remaining 8 MVP GDDs at **reduced depth** — one authoring pass, one `/design-review` each, accept-with-notes. Detailed Rules / Formulas / Acceptance Criteria are what `/dev-story` consumes and get full attention; Player Fantasy and Tuning Knobs stay thin. Order per systems-index: Device Frame & Button Input (3) → Need System (4) → Save & Persistence (5) → Life Stage & Growth (6) → LCD Screen Renderer (7) → Care Actions (8) → Offline Time Simulation (9) → Pet Animation & Reactions (10).
 4. **Minimal architecture** — 3 ADRs only: (a) LCD rendering approach, (b) save format + schema versioning + catalog wiring/immutability (PDD OQ#1/#2), (c) time/event injection. Skip the full traceability matrix and `/architecture-review` for now.
 5. `/create-epics` → `/create-stories` → `/dev-story` on the foundation layer.
 
 
-## NEXT SESSION — /test-setup (Phase 1 done, findings below)
+## NEXT SESSION — LCD rendering spike
 
-`/test-setup` was started 2026-09-22 and stopped after Phase 1 (detect) + Phase 2 (plan presented). **Nothing was written.** Resume at Phase 3. The plan below was presented to the user, who signalled intent to proceed — confirm the scope once at session start, then execute.
+`/test-setup` is **DONE** (2026-09-22) — see "Test infrastructure" below. The next
+technical unknown is the **LCD rendering spike**: SubViewport + pixel-grid shader
+vs. Godot 4.7's `DrawableTexture2D`. Pillar-1-critical, never prototyped, and it
+feeds ADR (a). Build it in `prototypes/`, not `src/`.
 
-### Phase 1 findings (already verified — do not re-derive)
-- Engine: **Godot 4.7.1 confirmed on PATH** (`godot --version` → `4.7.1.stable.official.a13da4feb`)
-- `tests/` — does not exist. `.github/workflows/` — does not exist. `addons/` — does not exist (gdUnit4 NOT installed)
-- **There is no `project.godot` at the repo root.** The only Godot project in the repo is the throwaway prototype. The pinned CI command (`godot --headless --script tests/gdunit4_runner.gd`) cannot run until the real game project exists, so `/test-setup` necessarily includes creating it
-- **Branch is `master`, not `main`.** The skill template's CI triggers on `main` and would silently never fire — use `master`
-- **gdUnit4 moved orgs**: `MikeSchulze/gdUnit4` → `godot-gdunit-labs/gdUnit4`. Verified by web search 2026-09-22: **v6.2.x supports Godot 4.7 / 4.7.1** (v6.x requires ≥4.5); the action `godot-gdunit-labs/gdUnit4-action` covers Godot 4.3–4.7.x
-- **The skill's runner template is stale**: it loads `res://addons/gdunit4/GdUnitRunner.gd`, but v6 uses a CLI entry point under `addons/gdUnit4/` (capital U) — likely `bin/GdUnitCmdTool.gd`. **Verify the real path after installing; do not write a runner from the template unverified**
-- **Path conflict**: the skill puts manual evidence at `tests/evidence/`, `.claude/docs/coding-standards.md` puts it at `production/qa/evidence/`. Follow coding-standards (project instruction wins); note the deviation in tests/README.md
+After that, resume step 3 of the compressed plan: batch-author the 8 remaining
+MVP GDDs, starting with Device Frame & Button Input.
 
-### Approved scope for Phase 3
-```
-project.godot            NEW — the real game project. Mobile renderer, 720x1280
-                         portrait, stretch canvas_items/expand (4.7 defaults),
-                         handheld/orientation=1, per technical-preferences.md.
-                         Use prototypes/device-button-feel-concept/project.godot
-                         as the reference; do NOT import prototype code.
-addons/gdUnit4/          install v6.2.x from the official release
-tests/README.md          layout, naming, story-type -> evidence table
-tests/unit/              one subdir per system
-tests/integration/
-tests/smoke/critical-paths.md   seed with Pocket Pal's actual core loop
-tests/gdunit4_runner.gd  wrapper matching the CI command pinned in
-                         technical-preferences.md, delegating to the real v6 CLI
-tests/unit/time_service/ ONE example test that proves the harness runs
-.github/workflows/tests.yml   triggers on master, gdUnit4-action, Godot 4.7.1
-```
+## Test infrastructure (DONE 2026-09-22, `/test-setup`)
 
-**Verification bar**: install gdUnit4 and actually run the example test to green. The engine is 4 versions past the model's reliable knowledge — a scaffolded file that was never executed is not evidence. Per coding-standards: "Compare expected output to actual output before marking work complete."
+Verified by execution, not scaffolded: **12/12 tests green, exit 0**; deliberately
+broken assertion returns **exit 100**, so the CI gate actually gates.
 
-**Why Time Service is the example test**: it is first in the design order, and writing it is where Time Service's two accepted blockers resolve — AC #2 (real wall-clock sleep violates the determinism standard) and AC #9 (unfalsifiable "no other system reads the wall clock" → CI lint gate + determinism test). Close both in that session and strike them from time-service.md's Open Questions.
+- **`project.godot`** now exists at the repo root — this is the real Pocket Pal
+  project (720x1280 portrait, mobile renderer, `canvas_items`/`expand`,
+  `handheld/orientation=1`). `.gdignore` files keep Godot out of `docs/`,
+  `design/`, `production/`, `prototypes/`, `tmp/` and the template dir.
+- **gdUnit4 v6.2.1** vendored at `addons/gdUnit4/` from `godot-gdunit-labs/gdUnit4`.
+- **`tests/gdunit4_runner.gd`** — wrapper for the pinned CI command. Three
+  non-obvious things it handles, all found by running it rather than reading docs:
+  1. gdUnit4 v6 **refuses `--headless`** by default → must pass `--ignoreHeadlessMode`.
+  2. The real entry point is `addons/gdUnit4/bin/GdUnitCmdTool.gd`; the skill
+     template's `addons/gdunit4/GdUnitRunner.gd` is stale for v6.
+  3. gdUnit4's arg parser **discards every token up to one containing
+     `GdUnitCmdTool.gd`**, so a synthetic arg vector must start with that sentinel
+     or the parser silently prints its help screen instead of running.
+- **`.github/workflows/tests.yml`** — triggers on `master` (not `main`), uses
+  `godot-gdunit-labs/gdUnit4-action@v1.3.2` pinned to gdUnit4 `v6.2.1` to match
+  the vendored copy. **Bump both together.** Second job: `clock-discipline`.
+- **Evidence path deviation**: manual evidence goes to `production/qa/evidence/`
+  per coding-standards, not the skill template's `tests/evidence/`. Noted in
+  `tests/README.md`.
+
+### Time Service blockers closed this session
+- **AC #2** rewritten — the real one-second wall-clock sleep is gone; monotonicity
+  is proven by advancing the injected clock.
+- **AC #9** rewritten — split into a determinism test plus the `clock-discipline`
+  CI lint gate, which fails the build on any engine clock API in `src/` outside
+  `src/core/time/system_time_source.gd`. **That filename is now part of the contract.**
+- **New open question raised**: `TimeSource` must also expose
+  `get_timezone_bias_minutes()`, not just `get_unix_time()` — otherwise
+  `get_local_calendar_date()` reads the machine's real timezone and every
+  calendar-day assertion is non-deterministic across machines. → time/event injection ADR.
+
+### Note for /dev-story on Time Service
+`tests/unit/time_service/time_service_contract_test.gd` is **specification-first**:
+it runs against a reference implementation declared inside the test file, because
+Time Service has no production code yet. When implementing, change **one line** —
+the `ServiceUnderTest` constant — to preload the real script. Every assertion
+carries over. Do not fork the tests.
 
 ## Progress
 - [x] /start — stage=Concept, review-mode=solo
@@ -59,8 +77,8 @@ tests/unit/time_service/ ONE example test that proves the harness runs
 - [x] /map-systems — systems-index.md (16 systems, design order set)
 - [x] /design-system time-service + /design-review — **Approved (accepted with notes)**, 6 blockers → Open Questions
 - [x] /design-system pet-definition-data + /design-review ×2 — **Approved (accepted with notes)**, 5 blockers + 10 recommended → Open Questions #8–#13
-- [ ] /test-setup — tests/unit, tests/integration, gdunit4_runner.gd, .github/workflows/tests.yml
-- [ ] LCD rendering spike — SubViewport+shader vs DrawableTexture2D → feeds ADR (a)
+- [x] /test-setup — project.godot, gdUnit4 v6.2.1, tests/, gdunit4_runner.gd, CI + clock-discipline gate. **12/12 green, exit 0 verified**
+- [ ] LCD rendering spike — SubViewport+shader vs DrawableTexture2D → feeds ADR (a)  **<- NEXT**
 - [ ] 8 remaining MVP GDDs (systems 3–10), reduced depth
 - [ ] 3 ADRs (LCD rendering, save/catalog, time injection)
 - [ ] /create-epics → /create-stories → /dev-story
@@ -88,7 +106,8 @@ tests/unit/time_service/ ONE example test that proves the harness runs
 - **Process (2026-09-22)**: solo review mode means `/design-review` is advisory. Default disposition is accept-with-notes; blockers become Open Questions resolved at their natural implementation moment. Do not run a GDD through more than one review cycle.
 
 ## Files
-- design/gdd/time-service.md — **Approved (accepted with notes)**; 6 ex-blockers in its Open Questions subsection
+- design/gdd/time-service.md — **Approved (accepted with notes)**; 6 ex-blockers in its Open Questions subsection, **2 of them closed 2026-09-22** (AC#2, AC#9)
+- project.godot, addons/gdUnit4/ (v6.2.1), tests/{README.md,gdunit4_runner.gd,unit/time_service/,integration/,smoke/}, .github/workflows/tests.yml
 - design/gdd/pet-definition-data.md — **Approved (accepted with notes)**; OQ#8–#13 carry the 5 blockers + 10 recommended
 - design/gdd/reviews/{time-service,pet-definition-data,game-concept}-review-log.md — full audit trail incl. 2026-09-22 dispositions
 - design/gdd/systems-index.md — PDD → Approved (with notes); 2 docs approved, 2/10 MVP

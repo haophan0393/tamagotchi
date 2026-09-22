@@ -42,6 +42,10 @@ dist/
 .godot/
 *.translation
 export_presets.cfg
+# gdUnit4 test run output (HTML/XML reports) — regenerated on every run.
+reports/
+# Note: *.uid files ARE committed. Godot 4.4+ uses them for stable resource
+# references; ignoring them causes broken links across machines.
 # Uncomment if using Godot:
 # *.import
 

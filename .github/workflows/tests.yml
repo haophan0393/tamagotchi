@@ -1,0 +1,83 @@
+# Automated test gate for Pocket Pal.
+#
+# Branch note: this repo's trunk is `master`, not `main`. The template default
+# would have silently never fired.
+name: Automated Tests
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+permissions:
+  contents: read
+  checks: write
+
+jobs:
+  # AC #9 (design/gdd/time-service.md), enforceable half.
+  #
+  # Time Service Core Rule 1 says no system reads the engine clock directly.
+  # That claim is unfalsifiable as a unit test — a test can only prove the code
+  # it calls is deterministic, never that some other file is. So it is enforced
+  # here instead: the only file permitted to touch the engine's clock APIs is
+  # the sanctioned SystemTimeSource. Anything else fails the build.
+  clock-discipline:
+    name: Clock Discipline Lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Assert no direct engine clock reads outside SystemTimeSource
+        run: |
+          # Engine time APIs that must be funnelled through TimeService.
+          PATTERN='Time\.get_unix_time_from_system|Time\.get_datetime_dict_from_system|Time\.get_ticks_(msec|usec)|Time\.get_time_zone_from_system|OS\.get_datetime'
+
+          # Search game code only. addons/ is third-party, tests/ construct fakes
+          # deliberately, prototypes/ is throwaway and explicitly never shipped.
+          VIOLATIONS=$(grep -rEn "$PATTERN" \
+            --include='*.gd' \
+            src/ 2>/dev/null \
+            | grep -v 'src/core/time/system_time_source.gd' \
+            || true)
+
+          if [ -n "$VIOLATIONS" ]; then
+            echo "::error::Direct engine clock access outside SystemTimeSource."
+            echo "Time Service Core Rule 1: all time must flow through TimeService."
+            echo "See design/gdd/time-service.md. Offending lines:"
+            echo "$VIOLATIONS"
+            exit 1
+          fi
+          echo "OK — no direct engine clock reads in src/."
+
+  test:
+    name: Run gdUnit4 Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          lfs: true
+
+      - name: Run gdUnit4 Tests
+        uses: godot-gdunit-labs/gdUnit4-action@v1.3.2
+        with:
+          godot-version: '4.7.1'
+          godot-status: 'stable'
+          # Pinned to the version vendored at addons/gdUnit4/ so CI and local
+          # runs execute identical framework code. Bump both together.
+          version: 'v6.2.1'
+          paths: |
+            tests/unit
+            tests/integration
+          timeout: 10
+          report-name: test-report.xml
+
+      - name: Upload Test Report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-report
+          path: reports/
+          if-no-files-found: ignore
