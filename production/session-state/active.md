@@ -9,10 +9,46 @@
 The compressed plan (≈10–12 sessions to first production code, vs ~30+ on the full path):
 
 1. **DONE 2026-09-22** — close Pet Definition Data and Time Service as *Approved (accepted with notes)*; all open review blockers converted to Open Questions in the GDDs with owners and target resolution points.
-2. **NEXT (parallel, not gated on any GDD)** — run `/test-setup` (tests/ scaffold + gdUnit4 runner + CI workflow) and the **LCD rendering spike** (SubViewport+shader vs `DrawableTexture2D`). These two answer the project's biggest technical unknowns and unblock the Time Service AC rewrites.
+2. **IN PROGRESS** — `/test-setup` (Phase 1 done, see NEXT SESSION below) (tests/ scaffold + gdUnit4 runner + CI workflow) and the **LCD rendering spike** (SubViewport+shader vs `DrawableTexture2D`). These two answer the project's biggest technical unknowns and unblock the Time Service AC rewrites.
 3. Batch-author the remaining 8 MVP GDDs at **reduced depth** — one authoring pass, one `/design-review` each, accept-with-notes. Detailed Rules / Formulas / Acceptance Criteria are what `/dev-story` consumes and get full attention; Player Fantasy and Tuning Knobs stay thin. Order per systems-index: Device Frame & Button Input (3) → Need System (4) → Save & Persistence (5) → Life Stage & Growth (6) → LCD Screen Renderer (7) → Care Actions (8) → Offline Time Simulation (9) → Pet Animation & Reactions (10).
 4. **Minimal architecture** — 3 ADRs only: (a) LCD rendering approach, (b) save format + schema versioning + catalog wiring/immutability (PDD OQ#1/#2), (c) time/event injection. Skip the full traceability matrix and `/architecture-review` for now.
 5. `/create-epics` → `/create-stories` → `/dev-story` on the foundation layer.
+
+
+## NEXT SESSION — /test-setup (Phase 1 done, findings below)
+
+`/test-setup` was started 2026-09-22 and stopped after Phase 1 (detect) + Phase 2 (plan presented). **Nothing was written.** Resume at Phase 3. The plan below was presented to the user, who signalled intent to proceed — confirm the scope once at session start, then execute.
+
+### Phase 1 findings (already verified — do not re-derive)
+- Engine: **Godot 4.7.1 confirmed on PATH** (`godot --version` → `4.7.1.stable.official.a13da4feb`)
+- `tests/` — does not exist. `.github/workflows/` — does not exist. `addons/` — does not exist (gdUnit4 NOT installed)
+- **There is no `project.godot` at the repo root.** The only Godot project in the repo is the throwaway prototype. The pinned CI command (`godot --headless --script tests/gdunit4_runner.gd`) cannot run until the real game project exists, so `/test-setup` necessarily includes creating it
+- **Branch is `master`, not `main`.** The skill template's CI triggers on `main` and would silently never fire — use `master`
+- **gdUnit4 moved orgs**: `MikeSchulze/gdUnit4` → `godot-gdunit-labs/gdUnit4`. Verified by web search 2026-09-22: **v6.2.x supports Godot 4.7 / 4.7.1** (v6.x requires ≥4.5); the action `godot-gdunit-labs/gdUnit4-action` covers Godot 4.3–4.7.x
+- **The skill's runner template is stale**: it loads `res://addons/gdunit4/GdUnitRunner.gd`, but v6 uses a CLI entry point under `addons/gdUnit4/` (capital U) — likely `bin/GdUnitCmdTool.gd`. **Verify the real path after installing; do not write a runner from the template unverified**
+- **Path conflict**: the skill puts manual evidence at `tests/evidence/`, `.claude/docs/coding-standards.md` puts it at `production/qa/evidence/`. Follow coding-standards (project instruction wins); note the deviation in tests/README.md
+
+### Approved scope for Phase 3
+```
+project.godot            NEW — the real game project. Mobile renderer, 720x1280
+                         portrait, stretch canvas_items/expand (4.7 defaults),
+                         handheld/orientation=1, per technical-preferences.md.
+                         Use prototypes/device-button-feel-concept/project.godot
+                         as the reference; do NOT import prototype code.
+addons/gdUnit4/          install v6.2.x from the official release
+tests/README.md          layout, naming, story-type -> evidence table
+tests/unit/              one subdir per system
+tests/integration/
+tests/smoke/critical-paths.md   seed with Pocket Pal's actual core loop
+tests/gdunit4_runner.gd  wrapper matching the CI command pinned in
+                         technical-preferences.md, delegating to the real v6 CLI
+tests/unit/time_service/ ONE example test that proves the harness runs
+.github/workflows/tests.yml   triggers on master, gdUnit4-action, Godot 4.7.1
+```
+
+**Verification bar**: install gdUnit4 and actually run the example test to green. The engine is 4 versions past the model's reliable knowledge — a scaffolded file that was never executed is not evidence. Per coding-standards: "Compare expected output to actual output before marking work complete."
+
+**Why Time Service is the example test**: it is first in the design order, and writing it is where Time Service's two accepted blockers resolve — AC #2 (real wall-clock sleep violates the determinism standard) and AC #9 (unfalsifiable "no other system reads the wall clock" → CI lint gate + determinism test). Close both in that session and strike them from time-service.md's Open Questions.
 
 ## Progress
 - [x] /start — stage=Concept, review-mode=solo
