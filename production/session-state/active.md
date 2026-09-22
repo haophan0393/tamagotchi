@@ -1,6 +1,6 @@
 # Active Session State
 
-*Updated: 2026-09-22 (post /test-setup + LCD spike + Device Frame GDD)*
+*Updated: 2026-09-22 (Device Frame reviewed; Need System GDD authored, pending review)*
 
 ## Current Task
 
@@ -15,13 +15,94 @@ The compressed plan (≈10–12 sessions to first production code, vs ~30+ on th
 5. `/create-epics` → `/create-stories` → `/dev-story` on the foundation layer.
 
 
-## NEXT SESSION — `/design-review design/gdd/device-frame-button-input.md`
+## DONE 2026-09-22 — Need System GDD (4) authored, NOT reviewed
 
-**Run it in a FRESH session.** The reviewer must not inherit this authoring
-context or independent critique is impossible.
+`design/gdd/need-system.md` — all 11 sections, 0 placeholders. 14 Core Rules,
+32 acceptance criteria (all BLOCKING, all gdUnit4-automatable), 10 Open
+Questions. Status in the index: **Designed** (pending review).
+Review mode: **lean** — `systems-designer` consulted for Formulas,
+`qa-lead` for Acceptance Criteria. CD-GDD-ALIGN skipped (lean).
 
-After the review, continue step 3 of the compressed plan: the next system in
-design order is **Need System (4)**.
+### NEXT SESSION — `/design-review design/gdd/need-system.md`, in a FRESH session
+
+### The decisions that shaped it
+
+**Lazy anchor evaluation, no tick.** A need stores only `anchor_value` +
+`anchor_utc`; the value is COMPUTED ON READ from elapsed time. Consequences:
+online/offline/suspended are arithmetically identical, so Offline Time
+Simulation implements no second decay path; `seconds_until_sad()` can solve for
+the exact crossing moment, which Daily Notification uses to schedule and Need
+System itself uses to arm a one-shot crossing timer (Core Rule 14 — there is
+still no tick; the timer observes the formula, never advances it).
+
+**Sleep is rate-switched, not press-restored.** Device Frame owns a `dark` flag
+and writes it one-way via `set_dark(bool, at_utc)`; while dark, sleep moves
+toward 100 at `recover_per_hour`. This resolves the Device Frame ↔ Need System
+cycle with the same pattern already used for Device Frame ↔ Settings. Because a
+rate change invalidates an anchor, **both edges of the toggle must re-anchor**.
+
+**"Done for today" redefined as *addressed*, not *content*** —
+`all_needs_addressed` = every need CONTENT, OR (sleep AND dark). Putting the pet
+to bed IS the resolution for sleep. This was forced by `systems-designer`
+finding that rate-switched sleep cannot be cleared inside a 1–3 min session,
+which contradicted the already-approved Overview. Overview reworded to
+"addressable"; signal renamed from `all_needs_content`.
+
+**0–100 scale is now owned by Need System** — closes Pet Definition Data
+Open Question #4.
+
+**MVP balance (bloop):** decay 3.0/hr for hunger/cleanliness/fun, sleep 1.5/hr,
+recover 5.0/hr, `sad_threshold` 40, `floor` 0, `restore_amount` 100. Sad at 20h,
+value 28 at the 24h check-in, floor only at 33h. Derived safe band for
+`decay_per_hour` at threshold 40 is **2.5–4.17** — re-tune against that band,
+not by feel. Unplaytested.
+
+**GDScript traps caught at design time** (two ACs are written as trap
+detectors): `elapsed_seconds / 3600.0` — integer division silently drops
+sub-hour decay; and `ceili()` not `int()` for `seconds_until_sad`, so a
+notification never fires early.
+
+### What this GDD owes other documents (10 Open Questions)
+- **Pet Definition Data** (4): `recover_per_hour` has no schema home;
+  `CareProfile.restore_amount` for `lights` is now dead data; load validation
+  permits `floor > sad_threshold`, `floor > 100` and `sad_threshold == 100`,
+  each of which silently breaks a need; and the "runtime state owned by Save &
+  Persistence" wording conflicts with Need System owning the live anchors.
+- **Device Frame** (1): empty urgency ranking is undefined — and that is the
+  normal state right after a care session. Third item for its revision list.
+- **Offline Time Sim / Save & Persistence** (2): `reanchor_with_cap()` and the
+  anchor accessor shape are both unspecified.
+- **Playtest** (2): balance numbers, and the "relief not guilt" claim which
+  depends on Pet Animation's greeting beat.
+
+Registry updated: 4 new formulas (`need_value`, `apply_care`,
+`seconds_until_sad`, `all_needs_addressed`), 1 new constant (`need_scale_max`),
+bloop need-profile attributes, `elapsed_seconds` referenced_by.
+Systems index: row 4 → Designed, plus 3 previously-missing edges added.
+
+## DONE 2026-09-22 — `/design-review design/gdd/device-frame-button-input.md`
+
+Verdict: **NEEDS REVISION** — 11 blocking, 8 recommended. Scope signal M.
+Specialists: game-designer, systems-designer, ux-designer, audio-director,
+gameplay-programmer, godot-specialist, qa-lead, creative-director (senior).
+Full findings: `design/gdd/reviews/device-frame-button-input-review-log.md`.
+Systems index row 3 now reads **In Review**. User chose to revise in a separate
+session; the 11 items are still open.
+
+The two that matter most, both "a verified claim that isn't":
+1. `ring_distance` assumes Euclidean mod, but GDScript `%` is sign-of-dividend —
+   at `from=2,to=0,n=3` it yields -2 and `press_cost=0`, making the BLOCKING
+   "press_cost <= 3" AC provably true on paper and silently false in code. Needs
+   `posmod()` and an AC enumerating all 9 pairs.
+2. `DisplayServer.get_display_safe_area()` is cited as settled fact in two ACs
+   while `docs/engine-reference/godot/modules/mobile-export.md:43` lists it as
+   OPEN for 4.7. Plus a real coordinate-space gap: it returns physical screen
+   pixels, but the project's stretch mode is `canvas_items`/`expand`.
+
+Senior rulings to apply during revision: the **ring stays** (add LCD directional
+glyphs rather than changing the scheme); **split the mute AC** into an automatable
+BLOCKING one plus an advisory human one; and **the tick fires during ACTING** —
+*"acknowledgement is unconditional; action is conditional."*
 
 ## Device Frame & Button Input GDD (DONE 2026-09-22 — authored, NOT reviewed)
 

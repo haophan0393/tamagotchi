@@ -69,6 +69,14 @@ entities:
       rules:
         - "bloop_playful if play_share >= 0.40"
       default_form: bloop_cozy
+    need_profile:
+      # Added 2026-09-22 by design/gdd/need-system.md (Formulas). Values are
+      # held in PDD's NeedProfile schema but derived and owned by Need System's
+      # balance model. Unplaytested — see need-system.md Open Questions.
+      hunger:      { decay_per_hour: 3.0, sad_threshold: 40, floor: 0, restore_amount: 100 }
+      cleanliness: { decay_per_hour: 3.0, sad_threshold: 40, floor: 0, restore_amount: 100 }
+      fun:         { decay_per_hour: 3.0, sad_threshold: 40, floor: 0, restore_amount: 100 }
+      sleep:       { decay_per_hour: 1.5, sad_threshold: 40, floor: 0, recover_per_hour: 5.0 }
     notes: "MVP provisional species/content — first pet defined. Two adult
       forms only; Discovery aesthetic does not land at this scope per
       game-concept.md (only becomes meaningful at v1.0's 4+ forms). Consumed
@@ -140,6 +148,7 @@ formulas:
     source: design/gdd/time-service.md
     referenced_by:
       - design/gdd/time-service.md
+      - design/gdd/need-system.md
     variables:
       - now_utc
       - since_utc
@@ -296,7 +305,111 @@ formulas:
     added: 2026-09-22
     revised: ""
 
-constants: []
+  - name: need_value
+    status: active
+    source: design/gdd/need-system.md
+    referenced_by:
+      - design/gdd/need-system.md
+    variables:
+      - anchor_value
+      - rate
+      - elapsed_seconds
+      - floor
+    output_range: [0, 100]
+    expression: "clamp(anchor_value + rate * (elapsed_seconds / 3600.0), floor, 100)"
+    notes: "Owned by Need System. Lazy anchor evaluation — value is COMPUTED ON
+      READ from (anchor_value, anchor_utc), never accumulated into. No tick
+      exists. rate is signed: -decay_per_hour normally, +recover_per_hour for
+      sleep while dark. Online, offline and suspended are arithmetically
+      identical, so Offline Time Simulation implements NO second decay path.
+      GDScript trap: elapsed_seconds / 3600.0 (float), never / 3600 — int
+      division truncates and silently drops sub-hour decay. Output range shown
+      for floor=0; general range is [floor, 100]. Consumed by Care Actions,
+      Offline Time Simulation, LCD Screen Renderer, Pet Animation & Reactions."
+    added: 2026-09-22
+    revised: ""
+
+  - name: apply_care
+    status: active
+    source: design/gdd/need-system.md
+    referenced_by:
+      - design/gdd/need-system.md
+    variables:
+      - need_value
+      - restore_amount
+      - floor
+    output_range: [0, 100]
+    expression: "clamp(need_value(now) + restore_amount, floor, 100)"
+    notes: "Owned by Need System. The upward re-anchor; also sets
+      anchor_utc = now. Re-anchoring is UNCONDITIONAL — applying care to a need
+      already at 100 is a legal no-op on the value but still updates the anchor
+      and still plays a reaction (Pillar 2 forbids a 'you didn't need to do
+      that' response). At MVP restore_amount = 100 one press always fully
+      clears from any starting value. Consumed by Care Actions."
+    added: 2026-09-22
+    revised: ""
+
+  - name: seconds_until_sad
+    status: active
+    source: design/gdd/need-system.md
+    referenced_by:
+      - design/gdd/need-system.md
+    variables:
+      - v0
+      - rate
+      - sad_threshold
+      - floor
+    output_range: [-1, null]
+    expression: "0 if v0 <= S; -1 if rate >= 0 or floor > S; else ceili((v0 - S) / (-rate) * 3600.0)"
+    notes: "Owned by Need System. SENTINEL CONTRACT IS PART OF THE INTERFACE:
+      0 = already sad, -1 = never. No null, no error, no exception. All three
+      guards are evaluated BEFORE the division, so there is no divide-by-zero
+      path. GDScript trap: use ceili(), not a truncating int(), so a scheduled
+      notification fires at or after the crossing and never early. Consumed by
+      Daily Notification (reminder scheduling) and by Need System itself to arm
+      the one-shot crossing timer (Core Rule 14)."
+    added: 2026-09-22
+    revised: ""
+
+  - name: all_needs_addressed
+    status: active
+    source: design/gdd/need-system.md
+    referenced_by:
+      - design/gdd/need-system.md
+    variables:
+      - need_states
+      - dark
+    output_range: [false, true]
+    expression: "every need is CONTENT, OR (need is sleep AND dark is true)"
+    notes: "Owned by Need System. The concept's explicit 'done for today'
+      signal. Sleep counts as ADDRESSED while dark is true because putting the
+      pet to bed is the resolution for that need — it then recovers unattended
+      and is CONTENT by morning. This is the one place a device state (dark,
+      owned by Device Frame) participates in a need condition. Renamed from
+      all_needs_content during authoring, 2026-09-22. Consumed by LCD Screen
+      Renderer and Pet Animation & Reactions."
+    added: 2026-09-22
+    revised: ""
+
+constants:
+
+  - name: need_scale_max
+    status: active
+    source: design/gdd/need-system.md
+    referenced_by:
+      - design/gdd/need-system.md
+      - design/gdd/pet-definition-data.md
+    value: 100
+    unit: points
+    notes: "The need scale is 0-100, owned by Need System (its Core Rule 2).
+      Closes Pet Definition Data Open Question #4, which explicitly deferred
+      scale ownership to this GDD. 100 = fully content, 0 = fully depleted.
+      Values are float; PDD's sad_threshold and floor and CareProfile's
+      restore_amount remain int, compared against the float value. A change
+      here invalidates every threshold, floor and restore value in every
+      species definition simultaneously — it is a constraint, not a knob."
+    added: 2026-09-22
+    revised: ""
 
 # Example:
 #
