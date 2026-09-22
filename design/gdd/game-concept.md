@@ -217,7 +217,7 @@ The three-button loop never changes. Growth comes through art and content layers
 | Consideration | Assessment |
 | ---- | ---- |
 | **Recommended Engine** | Godot 4.7.1 — pinned in `CLAUDE.md` and `docs/engine-reference/godot/VERSION.md`; strong 2D, lightweight, exports to iOS and Android (GABE standalone Android export lowers the Android pipeline risk; iOS has no equivalent) |
-| **Key Technical Challenges** | Offline time simulation from saved UTC timestamps (depends on `NOTIFICATION_APPLICATION_PAUSED/_RESUMED` behaviour — unconfirmed for 4.7); local push notifications (**still OPEN** — no built-in API, plugin not yet identified, gates the Vertical Slice tier); haptics via `Input.vibrate_handheld` (signature verified, per-platform amplitude untested on device); low-res LCD rendering (**unvalidated** — SubViewport + pixel-grid shader vs. 4.7's `DrawableTexture2D`; the button-feel prototype cut the LCD from scope); Android 16 KB page-size requirement; safe-area API for notched phones; iOS signing and store submission |
+| **Key Technical Challenges** | Offline time simulation from saved UTC timestamps (depends on `NOTIFICATION_APPLICATION_PAUSED/_RESUMED` behaviour — unconfirmed for 4.7); local push notifications (**still OPEN** — no built-in API, plugin not yet identified, gates the Vertical Slice tier); haptics via `Input.vibrate_handheld` (signature verified, per-platform amplitude untested on device); low-res LCD rendering (**RESOLVED 2026-09-22** — SubViewport + pixel-grid shader; `DrawableTexture2D` rejected, blit-only with no `draw_*` API. On-device perf still untested); Android 16 KB page-size requirement; safe-area API for notched phones; iOS signing and store submission |
 | **Art Style** | 2D, two-layer: smooth vector/painted device shells + ~32×32 pixel-art pet |
 | **Art Pipeline Complexity** | Low — pixel art keeps each new form/animation to minutes; shells are recolorable shapes |
 | **Audio Needs** | Minimal — a small set of piezo-style chirps and beeps, no music required for MVP |
@@ -240,7 +240,7 @@ The three-button loop never changes. Growth comes through art and content layers
 ### Technical Risks
 - Local notifications in Godot 4.7.1 depend on community plugins whose maintenance and 4.7 compatibility must be verified — **still unresolved after `/setup-engine`**; the Vertical Slice tier is gated on this spike.
 - Offline time simulation must be robust to clock changes, timezone shifts, and long absences. Because there is no fail state, a broken sim produces *silently* absurd states with no organic bug-report path — boundary tests (negative delta, zero, DST, multi-year) are mandatory, not optional.
-- LCD rendering approach is unvalidated (SubViewport vs. `DrawableTexture2D`) and is Pillar-1-critical.
+- ~~LCD rendering approach is unvalidated (SubViewport vs. `DrawableTexture2D`) and is Pillar-1-critical.~~ **RESOLVED 2026-09-22** — SubViewport + pixel-grid shader chosen; `DrawableTexture2D` rejected (blit-only, no `draw_*` API). See `prototypes/lcd-rendering-spike/REPORT.md`. Residual risk: on-device performance of the render target on a tile-based mobile GPU is still untested.
 - iOS builds require a Mac and a $99/year Apple Developer account; store review adds calendar time.
 - First game in Godot: tooling and export pipeline learning curve.
 

@@ -48,7 +48,7 @@ with the "Use Instead" column.
 | Manual post-process viewport chains | `Compositor` + `CompositorEffect` | Structured post-processing (4.3+) |
 | GodotPhysics3D for new projects | Jolt Physics 3D | Default since 4.6; better stability |
 | Hand-rolled touch joystick Control | `VirtualJoystick` node | Built-in since 4.7 with Fixed / Dynamic / Following modes |
-| SubViewport + shader just to paint into a texture | `DrawableTexture2D` | Simpler API for drawing into textures (4.7). SubViewport still correct for rendering a scene to texture. |
+| SubViewport + shader just to paint into a texture | `DrawableTexture2D` | **Only when compositing existing textures.** `DrawableTexture2D` is blit-only (`blit_rect`/`blit_rect_multi`) — it has no `draw_*` API, so it cannot replace a SubViewport whose contents are a scene tree, animated sprites, or Control nodes. Verified 2026-09-22, see `prototypes/lcd-rendering-spike/REPORT.md`. |
 | `await some_signal` between `tween_*` steps | `Tween.tween_await(signal)` | Keeps the sequence inside one Tween (4.7) |
 | Animating `position`/`scale` on a Control for visual feedback | `Control.offset_transform_*` properties | Visual-only; does not disturb container layout (4.7) |
 | Relying on implicit `null` return in typed overrides | Explicit `return` | Required by GDScript since 4.7 |

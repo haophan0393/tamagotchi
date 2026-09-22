@@ -40,8 +40,9 @@ This supplements (not replaces) the agent's built-in knowledge.
 ## Rendering (4.7)
 
 - **HDR output** on Windows, macOS, iOS, visionOS, Linux/Wayland.
-- **`DrawableTexture2D`**: draw into a texture without a SubViewport or
-  RenderingDevice code.
+- **`DrawableTexture2D`**: **blit** into a texture without a SubViewport or
+  RenderingDevice code. Blit-only — no `draw_*` API; sources must already be
+  `Texture2D`. Verified 2026-09-22.
 - **`GradientTexture2D` conic fill**: CSS-style conic gradients.
 - **Nearest-neighbor 3D viewport scaling** for crisp retro rendering (3D only —
   2D pixel look still comes from `canvas_items` stretch + `Nearest` texture filter).

@@ -1,6 +1,6 @@
 # Active Session State
 
-*Updated: 2026-09-22 (post /test-setup)*
+*Updated: 2026-09-22 (post /test-setup + LCD spike)*
 
 ## Current Task
 
@@ -9,21 +9,52 @@
 The compressed plan (≈10–12 sessions to first production code, vs ~30+ on the full path):
 
 1. **DONE 2026-09-22** — close Pet Definition Data and Time Service as *Approved (accepted with notes)*; all open review blockers converted to Open Questions in the GDDs with owners and target resolution points.
-2. **`/test-setup` DONE 2026-09-22** (project.godot + gdUnit4 v6.2.1 + runner + CI, 12/12 green). **LCD rendering spike still open** (SubViewport+shader vs `DrawableTexture2D`) — now the top technical unknown.
+2. **DONE 2026-09-22** — `/test-setup` (project.godot + gdUnit4 v6.2.1 + runner + CI, 12/12 green) and the **LCD rendering spike** (verdict: SubViewport; `DrawableTexture2D` rejected).
 3. Batch-author the remaining 8 MVP GDDs at **reduced depth** — one authoring pass, one `/design-review` each, accept-with-notes. Detailed Rules / Formulas / Acceptance Criteria are what `/dev-story` consumes and get full attention; Player Fantasy and Tuning Knobs stay thin. Order per systems-index: Device Frame & Button Input (3) → Need System (4) → Save & Persistence (5) → Life Stage & Growth (6) → LCD Screen Renderer (7) → Care Actions (8) → Offline Time Simulation (9) → Pet Animation & Reactions (10).
 4. **Minimal architecture** — 3 ADRs only: (a) LCD rendering approach, (b) save format + schema versioning + catalog wiring/immutability (PDD OQ#1/#2), (c) time/event injection. Skip the full traceability matrix and `/architecture-review` for now.
 5. `/create-epics` → `/create-stories` → `/dev-story` on the foundation layer.
 
 
-## NEXT SESSION — LCD rendering spike
+## NEXT SESSION — author the Device Frame & Button Input GDD
 
-`/test-setup` is **DONE** (2026-09-22) — see "Test infrastructure" below. The next
-technical unknown is the **LCD rendering spike**: SubViewport + pixel-grid shader
-vs. Godot 4.7's `DrawableTexture2D`. Pillar-1-critical, never prototyped, and it
-feeds ADR (a). Build it in `prototypes/`, not `src/`.
+`/test-setup` and the **LCD rendering spike** are both DONE (2026-09-22). Resume
+step 3 of the compressed plan: batch-author the 8 remaining MVP GDDs at reduced
+depth, in systems-index order, starting with **Device Frame & Button Input (3)**.
 
-After that, resume step 3 of the compressed plan: batch-author the 8 remaining
-MVP GDDs, starting with Device Frame & Button Input.
+Two spike findings feed that document directly — see "LCD rendering spike" below:
+the **integer-scale constraint** on the LCD rect, and the still-open **on-device
+haptics** question.
+
+## LCD rendering spike (DONE 2026-09-22) — verdict: Approach A
+
+`prototypes/lcd-rendering-spike/` — REPORT.md carries the full rationale.
+**Decision: SubViewport at LCD resolution + pixel-grid shader.** Feeds ADR (a).
+
+- **`DrawableTexture2D` is REJECTED, and the reason is not performance.** It is a
+  **blit target, not a canvas**: `blit_rect` / `blit_rect_multi` only, with **no
+  `draw_*` API at all**. Everything composited into it must already be a
+  `Texture2D` — no `AnimatedSprite2D`, no `Tween`, no `Label`. That is fatal for a
+  panel that owns the HUD, menu cursor and pet animation.
+- **Our own engine-reference docs were wrong about this** and said Option B worked
+  "if all drawing is done via `draw_*` calls" — the exact thing it cannot do.
+  Corrected in `modules/rendering.md`, `deprecated-apis.md`, `current-best-practices.md`.
+- **Approach C (direct sprites, no intermediate texture) produced NO pixel grid.**
+  A `Control`'s material does not apply to its children. General rule: **the grid
+  shader requires the LCD contents flattened into one texture first.** Only found
+  by looking at the screenshots — frame times were excellent and nothing errored.
+- **Performance did not separate A from B** (240-246 vs 240-297 fps, run-to-run
+  noise; 11 vs 6 draw calls, both far under the 50 budget). B repainting every
+  frame was also unmeasurable. Desktop only — **nothing has run on the Android target.**
+- **Gotcha**: `setup()` takes `DrawableTexture2D.DrawableFormat`, not `Image.Format`.
+- **Gotcha**: `SubViewportContainer.stretch = true` alone resizes the viewport to
+  the container, defeating low-res rendering. `stretch_shrink` is the real knob.
+
+### Constraint this hands to the Device Frame GDD
+**The LCD's on-screen rect must be an exact integer multiple of the LCD resolution**
+(spike used 64x64 at x6 = 384x384). Non-integer scale makes the grid shimmer.
+This collides with safe-area layout on notched phones and 4.7's `expand` stretch
+default — the device frame must snap the panel to the largest integer multiple
+that fits and absorb the remainder in the shell, not scale to fill.
 
 ## Test infrastructure (DONE 2026-09-22, `/test-setup`)
 
@@ -78,8 +109,8 @@ carries over. Do not fork the tests.
 - [x] /design-system time-service + /design-review — **Approved (accepted with notes)**, 6 blockers → Open Questions
 - [x] /design-system pet-definition-data + /design-review ×2 — **Approved (accepted with notes)**, 5 blockers + 10 recommended → Open Questions #8–#13
 - [x] /test-setup — project.godot, gdUnit4 v6.2.1, tests/, gdunit4_runner.gd, CI + clock-discipline gate. **12/12 green, exit 0 verified**
-- [ ] LCD rendering spike — SubViewport+shader vs DrawableTexture2D → feeds ADR (a)  **<- NEXT**
-- [ ] 8 remaining MVP GDDs (systems 3–10), reduced depth
+- [x] LCD rendering spike — **Approach A (SubViewport) chosen**; DrawableTexture2D rejected (blit-only). Feeds ADR (a)
+- [ ] 8 remaining MVP GDDs (systems 3–10), reduced depth  **<- NEXT** (start: Device Frame & Button Input)
 - [ ] 3 ADRs (LCD rendering, save/catalog, time injection)
 - [ ] /create-epics → /create-stories → /dev-story
 
@@ -117,12 +148,13 @@ carries over. Do not fork the tests.
 - production/review-mode.txt — `solo`
 - CLAUDE.md, .claude/docs/technical-preferences.md
 - docs/engine-reference/godot/ — VERSION.md, breaking-changes, deprecated-apis, best-practices, modules/*
-- prototypes/device-button-feel-concept/, prototypes/index.md
+- prototypes/device-button-feel-concept/, prototypes/lcd-rendering-spike/, prototypes/index.md
+- docs/engine-reference/godot/ — rendering.md, deprecated-apis.md, current-best-practices.md **corrected 2026-09-22** (DrawableTexture2D)
 
 ## Open Questions
 
 **Technical unknowns that need code, not documents — highest priority:**
-- LCD rendering approach unvalidated (SubViewport + pixel-grid shader vs 4.7's `DrawableTexture2D`). Pillar-1-critical, never prototyped. → spike now, feeds ADR (a) and LCD Screen Renderer's Formulas section
+- ~~LCD rendering approach unvalidated~~ **RESOLVED 2026-09-22** — Approach A (SubViewport). Residual: **on-device perf of the render target on a tile-based mobile GPU is untested**; so is whether the flicker reads as "warm LCD" or "broken screen" on a real phone.
 - Haptic sync on a real device (`vibrate_handheld` amplitude support per platform) — untested; blocks finalising the Device Frame GDD
 - Local-notification plugin still unidentified for 4.7 — gates the Vertical Slice tier (Daily Notification). Scope fallback: ship the slice without it
 - Verify for 4.7 (see docs/engine-reference/godot/modules/mobile-export.md): `NOTIFICATION_APPLICATION_PAUSED/_RESUMED`, iOS signing, safe-area API
