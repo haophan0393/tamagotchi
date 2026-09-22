@@ -1,8 +1,8 @@
 # Pet Definition Data
 
-> **Status**: Revised (pending re-review)
+> **Status**: Approved (accepted with notes) — 2026-09-22
 > **Author**: user + agents
-> **Last Updated**: 2026-09-21
+> **Last Updated**: 2026-09-22
 > **Implements Pillar**: Pillar 5: Simple Core, Infinite Shells (primary); Pillar 4: Color Is the Character (palettes); indirectly Pillar 2: Never Guilt, Always Welcome (thresholds must never encode punishment)
 > **Creative Director Review (CD-GDD-ALIGN)**: Skipped — Solo mode
 
@@ -218,3 +218,9 @@ Since PDD's whole purpose is designer-adjustable content, nearly every numeric f
 | 5 | Empty-window and tie-break rules for form selection (Core Rule 11 defers both to Life Stage & Growth) | Life Stage & Growth design session | Resolve in that GDD's Core Rules / Edge Cases |
 | 6 | ~~No tooling catches an unreachable `FormRule` at load time~~ **Resolved 2026-09-21**: distinct-actions constraint (Core Rule 11) makes reachability decidable; non-rejecting load-time warning (Core Rule 12); CI-blocking unit-test fixture (Acceptance Criteria) is the shipping gate | — | Closed |
 | 7 | ~~Species-level `retired` flag undeclared~~ **Resolved 2026-09-21**: `retired: bool` added to Core Rule 4; Core Rule 13 split into `get_all_species()` (includes retired, for the album) and `get_hatchable_species()` (excludes retired, for new eggs) | — | Closed |
+| 8 | Rule 12's "≥1 non-retired adult form" check evicts a fully-retired species that Rules 2/13 promise the album can resolve forever. Fix: scope the check — non-retired species need ≥1 non-retired form; retired species need ≥1 form of any status | systems-designer | Life Stage & Growth design session, or first catalog-validator implementation — **review blocker accepted 2026-09-22** |
+| 9 | Unknown-id lookup result is not pinned (Rule 13 says "null or explicit error"). Fix: pin `null` in Rule 13 and the matching AC | qa-lead | When the catalog API is implemented (OQ#2 ADR) — **review blocker accepted 2026-09-22** |
+| 10 | "Ready with 0 hatchable species" in a shipped build is a silent outage — needs an explicit terminal failure state or a named signal that Hatching Onboarding must handle | systems-designer | Hatching Onboarding design session — **review blocker accepted 2026-09-22** |
+| 11 | `min_share` range must be `(0, 1]` — `0.0` always matches and shadows every later rule and the default. Fix: Rule 11 range, Rule 12 check, new AC | systems-designer | With Life Stage & Growth's rule-table design — **review blocker accepted 2026-09-22** |
+| 12 | 32×32 sprite constant is owned by a dependent (LCD Renderer) while PDD claims no upstream deps. Fix: PDD declares the constant (value provisional per OQ#3); LCD Renderer reads it | systems-designer | LCD Screen Renderer design session, resolved together with OQ#3 — **review blocker accepted 2026-09-22** |
+| 13 | 10 recommended items from the 2026-09-22 review remain unaddressed: CI gate implementability (injectable build-type flag; move shipped-catalog fixture out of `tests/unit/`), Rule 12 cross-checks, shadowing detector, `duplicate()` ban in Rule 3, hidden+retired policy, Rule 14 minor-revision clarity, missing ACs, numeric boot budget, bloop `window_days = 4`, species-prefixed form ids — see `design/gdd/reviews/pet-definition-data-review-log.md` | — | Backlog: fold in opportunistically during implementation; none gate first code |

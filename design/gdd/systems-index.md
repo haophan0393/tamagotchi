@@ -2,7 +2,7 @@
 
 > **Status**: Draft
 > **Created**: 2026-09-18
-> **Last Updated**: 2026-09-21
+> **Last Updated**: 2026-09-22
 > **Source Concept**: design/gdd/game-concept.md (revised 2026-09-18 after `/design-review`)
 
 ---
@@ -18,7 +18,7 @@ Pocket Pal is mechanically small by design: a skeuomorphic three-button device w
 | # | System Name | Category | Priority | Status | Design Doc | Depends On |
 |---|-------------|----------|----------|--------|------------|------------|
 | 1 | Time Service (inferred) | Core | MVP | Approved (as-is) | design/gdd/time-service.md | — |
-| 2 | Pet Definition Data (inferred) | Core | MVP | Revised (pending re-review) | design/gdd/pet-definition-data.md | — |
+| 2 | Pet Definition Data (inferred) | Core | MVP | Approved (with notes) | design/gdd/pet-definition-data.md | — |
 | 3 | Device Frame & Button Input | Gameplay | MVP | Not Started | — | — |
 | 4 | Need System | Gameplay | MVP | Not Started | — | Time Service, Pet Definition Data |
 | 5 | Save & Persistence | Persistence | MVP | Not Started | — | Time Service, Pet Definition Data |
@@ -160,7 +160,7 @@ Effort: S = 1 session, M = 2–3 sessions, L = 4+ sessions. Systems 1–2 are in
 | Total systems identified | 16 |
 | Design docs started | 2 |
 | Design docs reviewed | 2 |
-| Design docs approved | 1 |
+| Design docs approved | 2 |
 | MVP systems designed | 2/10 |
 | Vertical Slice systems designed | 0/3 |
 

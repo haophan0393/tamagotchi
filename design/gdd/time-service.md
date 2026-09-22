@@ -1,6 +1,6 @@
 # Time Service
 
-> **Status**: Designed (pending review)
+> **Status**: Approved (accepted with notes) — 2026-09-19
 > **Author**: user + agents
 > **Last Updated**: 2026-09-18
 > **Implements Pillar**: Infrastructure (indirectly serves Pillar 2: Never Guilt, Always Welcome; Pillar 3: Two Minutes of Joy)
@@ -145,3 +145,14 @@ N/A — Time Service has no UI surface. It is consumed only by other systems' co
 - **Q**: `NOTIFICATION_APPLICATION_PAUSED` / `_RESUMED` behavior is unconfirmed for Godot 4.7 (flagged in `docs/engine-reference/godot/modules/mobile-export.md`). This affects when Offline Time Simulation captures the "app went to background" timestamp that it later hands to Time Service. **Owner**: engineering. **Target**: research spike during architecture, before Offline Time Simulation is designed.
 - **Q**: DST-transition and timezone-change behavior for `get_local_calendar_date()` / `is_new_calendar_day()` is asserted by design (Edge Cases) but not verified on real devices. **Owner**: QA / dev. **Target**: on-device verification before Life Stage & Growth and Offline Time Simulation implementation.
 - **Q**: Exact `TimeProvider` Autoload wiring mechanics (how the production `TimeService` singleton is constructed and exposed) are deferred to an ADR rather than fixed here. **Owner**: technical-director. **Target**: architecture phase.
+
+### Accepted review blockers (2026-09-19 `/design-review`, converted to open questions 2026-09-22)
+
+The 2026-09-19 review returned NEEDS REVISION with 6 blocking items. All were documentation/contract fixes — the architecture (injectable `TimeSource`, no gameplay policy, non-negative clamp) was judged correct and needs no redesign. The GDD was accepted as-is; the items are carried here. Pillar 2 ("no fail state") is why they matter: a bad time value fails silently rather than crashing.
+
+- **Q**: Timestamp domain is "any epoch" — must be narrowed to a bounded window to rule out int64 wrap and negative-epoch input to `local_date`. **Owner**: technical-director. **Target**: the storage/versioning ADR, before Save & Persistence is implemented.
+- **Q**: The anchor-timestamp data contract (field names, nullability, value on a new save) is unspecified for all five consumers. **Owner**: systems-designer. **Target**: Save & Persistence design session.
+- **Q**: The GDD claims engine local-time APIs handle DST. This is false — Godot 4.7.1 ships no tzdb. Must be restated as an explicit accepted limitation. **Owner**: engineering. **Target**: correct when Offline Time Simulation is designed.
+- **Q**: AC #2 uses a real wall-clock sleep, violating the determinism standard in `.claude/docs/coding-standards.md`. Must be rewritten against the injected test clock. **Owner**: qa-lead. **Target**: `/test-setup`, when the first Time Service test is written.
+- **Q**: AC #9 is unfalsifiable as written ("no other system reads the wall clock"). Must become a CI lint gate plus a determinism test. **Owner**: qa-lead. **Target**: `/test-setup`, as part of the CI workflow.
+- **Q**: Section "Detailed Design" should be renamed "Detailed Rules" to match the required 8-section GDD standard. **Owner**: — . **Target**: cosmetic; fix on next touch of this file.
