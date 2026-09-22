@@ -1,6 +1,6 @@
 # Active Session State
 
-*Updated: 2026-09-22 (post /test-setup + LCD spike)*
+*Updated: 2026-09-22 (post /test-setup + LCD spike + Device Frame GDD)*
 
 ## Current Task
 
@@ -15,15 +15,59 @@ The compressed plan (≈10–12 sessions to first production code, vs ~30+ on th
 5. `/create-epics` → `/create-stories` → `/dev-story` on the foundation layer.
 
 
-## NEXT SESSION — author the Device Frame & Button Input GDD
+## NEXT SESSION — `/design-review design/gdd/device-frame-button-input.md`
 
-`/test-setup` and the **LCD rendering spike** are both DONE (2026-09-22). Resume
-step 3 of the compressed plan: batch-author the 8 remaining MVP GDDs at reduced
-depth, in systems-index order, starting with **Device Frame & Button Input (3)**.
+**Run it in a FRESH session.** The reviewer must not inherit this authoring
+context or independent critique is impossible.
 
-Two spike findings feed that document directly — see "LCD rendering spike" below:
-the **integer-scale constraint** on the LCD rect, and the still-open **on-device
-haptics** question.
+After the review, continue step 3 of the compressed plan: the next system in
+design order is **Need System (4)**.
+
+## Device Frame & Button Input GDD (DONE 2026-09-22 — authored, NOT reviewed)
+
+`design/gdd/device-frame-button-input.md` — all 11 sections, 0 placeholders.
+Status: **Designed** (pending review). Reduced depth per the compressed path:
+Detailed Rules / Formulas / Acceptance Criteria at full depth; Player Fantasy
+and Tuning Knobs thin.
+
+### The decision that shaped it
+The concept's two constraints were **arithmetically incompatible**: 4 care
+actions and "any care action reachable in <=3 presses". Under cycle-then-select
+item *k* costs `k+1` presses, so only the first two items can ever fit.
+
+**Resolved by making C cycle backwards**, turning the menu into a ring and
+halving worst-case distance — which fits <=3 exactly at **3 ring items, not 4**:
+- `ring_distance = min((to-from) mod n, (from-to) mod n)`
+- `press_cost = ring_distance + 2` → **2 or 3 for n=3; 4 at n=4 (breaks)**
+- **`n <= 3` is therefore a CONSTRAINT, not a tuning knob.**
+
+Buttons: **A = next, B = select, C = previous.** `CONFIRM` is the single modal
+state where the ring is suspended and C means cancel (for graduation).
+
+### Two consequences other GDDs must accept
+1. **Lights on/off is reclassified** from a care action (game-concept.md line 75
+   lists it as one of four) to a **contextual device toggle** on B in `IDLE`
+   while the pet is sleepy. Either the concept is updated, or **Care Actions must
+   accept it**. Do not let this drift.
+2. **Care Actions must not add a ring item.** A fourth breaks the press budget.
+   Registered in the entity registry against `press_cost` so `/consistency-check`
+   will catch it.
+
+### Provisional assumptions (undesigned dependencies)
+- Need System exposes an **urgency ranking** — used to place the cursor on open.
+- `LCD_W`/`LCD_H` assumed **64x64**; LCD Screen Renderer owns the real value.
+- Care Actions' Play mini-game input model is unresolved; anything beyond the
+  three buttons collides with Core Rule 1.
+
+### Registry
+3 new formulas registered, sourced to this GDD: `ring_distance`, `press_cost`
+(constraint-bearing), `lcd_scale`.
+
+### Still the top open risk
+**Haptics have never run on a real phone.** Signature verified against 4.7.1,
+but per-platform `amplitude` support is unknown and triad sync is unvalidated on
+glass. Underpins Pillar 1. Graceful degradation is designed in (Core Rule 10),
+so it cannot block MVP — only weaken it. On-device spike before Vertical Slice.
 
 ## LCD rendering spike (DONE 2026-09-22) — verdict: Approach A
 
@@ -110,7 +154,8 @@ carries over. Do not fork the tests.
 - [x] /design-system pet-definition-data + /design-review ×2 — **Approved (accepted with notes)**, 5 blockers + 10 recommended → Open Questions #8–#13
 - [x] /test-setup — project.godot, gdUnit4 v6.2.1, tests/, gdunit4_runner.gd, CI + clock-discipline gate. **12/12 green, exit 0 verified**
 - [x] LCD rendering spike — **Approach A (SubViewport) chosen**; DrawableTexture2D rejected (blit-only). Feeds ADR (a)
-- [ ] 8 remaining MVP GDDs (systems 3–10), reduced depth  **<- NEXT** (start: Device Frame & Button Input)
+- [x] Device Frame & Button Input GDD (system 3) — authored, **pending `/design-review`**
+- [ ] 7 remaining MVP GDDs (systems 4–10), reduced depth  **<- NEXT** (next: Need System)
 - [ ] 3 ADRs (LCD rendering, save/catalog, time injection)
 - [ ] /create-epics → /create-stories → /dev-story
 

@@ -19,7 +19,7 @@ Pocket Pal is mechanically small by design: a skeuomorphic three-button device w
 |---|-------------|----------|----------|--------|------------|------------|
 | 1 | Time Service (inferred) | Core | MVP | Approved (as-is) | design/gdd/time-service.md | — |
 | 2 | Pet Definition Data (inferred) | Core | MVP | Approved (with notes) | design/gdd/pet-definition-data.md | — |
-| 3 | Device Frame & Button Input | Gameplay | MVP | Not Started | — | — |
+| 3 | Device Frame & Button Input | Gameplay | MVP | Designed | design/gdd/device-frame-button-input.md | — |
 | 4 | Need System | Gameplay | MVP | Not Started | — | Time Service, Pet Definition Data |
 | 5 | Save & Persistence | Persistence | MVP | Not Started | — | Time Service, Pet Definition Data |
 | 6 | Life Stage & Growth | Progression | MVP | Not Started | — | Time Service, Pet Definition Data, Save & Persistence |
@@ -39,6 +39,7 @@ Pocket Pal is mechanically small by design: a skeuomorphic three-button device w
 - *Care Actions* includes the **Play Mini-Game** (left/right); its input model must be resolved inside that GDD.
 - *Life Stage & Growth* owns the **care-history rolling log** that Care Actions writes to and form selection reads from.
 - *LCD Screen Renderer* includes the **LCD HUD & Menu Icons** (need icons, menu cursor, "done for today" signal).
+- *Device Frame & Button Input* has a **soft two-way edge to Life Stage & Growth** (`request_confirm()` / `confirm_result()`) not shown in the dependency column — found while designing Device Frame, 2026-09-22. Growth functions without a confirm prompt, so it is soft, but the channel is real.
 
 **Deliberately excluded:** analytics/telemetry (nothing needs it; cuts against the cozy tone), monetization/IAP (shells are earned, never sold), social/sharing, "Species" as a system (species are Pet Definition Data).
 
@@ -158,10 +159,10 @@ Effort: S = 1 session, M = 2–3 sessions, L = 4+ sessions. Systems 1–2 are in
 | Metric | Count |
 |--------|-------|
 | Total systems identified | 16 |
-| Design docs started | 2 |
+| Design docs started | 3 |
 | Design docs reviewed | 2 |
 | Design docs approved | 2 |
-| MVP systems designed | 2/10 |
+| MVP systems designed | 3/10 |
 | Vertical Slice systems designed | 0/3 |
 
 ---

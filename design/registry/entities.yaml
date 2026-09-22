@@ -37,7 +37,7 @@
 #   Each entry: name, status, source, referenced_by[], attributes{}, added, revised
 
 version: 1
-last_updated: "2026-09-21"
+last_updated: "2026-09-22"
 
 # ─── ENTITIES ────────────────────────────────────────────────────────────────
 # Named game-world objects: enemies, NPCs, characters, factions, bosses.
@@ -237,6 +237,64 @@ formulas:
 # inventory, or base inventory slots defined in inventory but displayed in HUD).
 #
 # Required fields: name, status, source, referenced_by, value, unit, added
+
+  - name: ring_distance
+    status: active
+    source: design/gdd/device-frame-button-input.md
+    referenced_by:
+      - design/gdd/device-frame-button-input.md
+    variables:
+      - from
+      - to
+      - n
+    output_range: [0, 1]
+    expression: "min((to - from) mod n, (from - to) mod n)"
+    notes: "Owned by Device Frame's menu ring. Bidirectional traversal: A steps
+      forward, C steps backward, so the worst-case distance is halved versus a
+      one-way cycle. Output range shown for n=3 (the pinned MVP ring size);
+      general range is 0..floor(n/2). Consumed by Care Actions and LCD Screen
+      Renderer (cursor position)."
+    added: 2026-09-22
+    revised: ""
+
+  - name: press_cost
+    status: active
+    source: design/gdd/device-frame-button-input.md
+    referenced_by:
+      - design/gdd/device-frame-button-input.md
+    variables:
+      - ring_distance
+    output_range: [2, 3]
+    expression: "ring_distance + 2"
+    notes: "CONSTRAINT-BEARING. Encodes game-concept.md's 'any care action
+      reachable in <=3 presses from idle'. Cost = 1 open + ring_distance
+      traversals + 1 select. Output range shown for n=3; at n=4 the max becomes
+      4 and the concept constraint BREAKS. Ring size n<=3 is therefore a
+      constraint, not a tuning knob — adding a fourth menu item is a
+      concept-level change. Care Actions must not add ring items."
+    added: 2026-09-22
+    revised: ""
+
+  - name: lcd_scale
+    status: active
+    source: design/gdd/device-frame-button-input.md
+    referenced_by:
+      - design/gdd/device-frame-button-input.md
+    variables:
+      - avail_w
+      - avail_h
+      - LCD_W
+      - LCD_H
+    output_range: [1, null]
+    expression: "max(1, floor(min(avail_w / LCD_W, avail_h / LCD_H)))"
+    notes: "Integer-only by construction. A fractional scale makes the LCD pixel
+      grid shimmer against the pixel art — verified in
+      prototypes/lcd-rendering-spike/REPORT.md. Remainder is absorbed as shell
+      padding, never by scaling the panel. LCD_W/LCD_H are provisionally 64x64
+      and are owned by LCD Screen Renderer, not by Device Frame. Derived value —
+      never authored by hand."
+    added: 2026-09-22
+    revised: ""
 
 constants: []
 
