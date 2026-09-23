@@ -1,6 +1,6 @@
 # Active Session State
 
-*Updated: 2026-09-23 (shortcut to code; ADR-0001 written)*
+*Updated: 2026-09-23 (epics created; ADRs 0001–0002 Accepted)*
 
 ## NOW — SHORTCUT TO CODE (decided 2026-09-23)
 User chose to start code on the three approved systems (Time Service, Pet Definition Data, Need System) before the remaining GDDs are done.
@@ -14,7 +14,9 @@ Shortcut plan:
 2. **DONE 2026-09-23** — ADR-0002 pet catalog loading, injection & immutability → docs/architecture/adr-0002-pet-catalog-loading-and-immutability.md (Proposed). `.tres` Resources + CatalogManifest (ext_resource refs); pure CatalogValidator; injected `strict` build-type flag; PetCatalog lookups return null; setter guards + recursive lock(); CI lint for SpriteFrames mutators / duplicate() / pet-data load(). NeedSystem._init(time, need_profile, care_profile). PDD GDD synced (Rules 3, 13; 2 ACs; OQ#1 half, #2, #9 resolved). Registry updated (+1 state, +1 interface, +1 api, +4 forbidden).
    - Pre-/dev-story checks owed (local 4.7.1): Object.set() hits setters on a locked resource; String arg → StringName-keyed dict lookup; make_read_only rejects append/sort.
    - Export checks owed: manifest species included in the PCK with a filtered preset; **on a real device export, catalog READY with ≥1 species** (godot#98798, typed arrays loading empty on export).
-3. **NEXT SESSION** — `/create-epics` (foundation layer only: Time Service, Pet Definition Data, Need System) → `/create-stories` → `/dev-story`.
+3. **DONE 2026-09-23** — `/create-epics`: production/epics/{time-service,pet-definition-data,need-system}/EPIC.md + index.md. Need System is Core layer (built third). User decisions: **ADR-0001 and ADR-0002 → Accepted** (local compile checks become each epic's first story; ADR fallbacks apply if they fail); **tr-registry.yaml seeded with 33 TR-IDs**, one per GDD Core Rule (+ TR-time-service-005 lifecycle). Time Service epic also owns GameRoot/AppLifecycle/TimeProvider scaffolding. Untraced: TR-need-system-013 (Save accessor shape → ADR-0003).
+4. **NEXT** — `/create-stories time-service` → `pet-definition-data` → `need-system`, then `/dev-story`.
+   - Previous step-3 notes still apply:
    - Run `/architecture-review` in a FRESH session at some point (never in the authoring session).
    - ADR renumbering: 0003 = save format/versioning (waits on the Save GDD); 0004 = LCD rendering (SubViewport spike).
    - Need System's asks of PDD are still open: validation `floor < sad_threshold < 100`, `decay_per_hour ≥ 0.01`. CatalogValidator implements PDD Rule 12, so fold these into the PDD before the validator story.

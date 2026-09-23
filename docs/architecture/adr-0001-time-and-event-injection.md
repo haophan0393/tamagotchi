@@ -1,7 +1,7 @@
 # ADR-0001: Time and Event Injection
 
 ## Status
-Proposed
+Accepted (2026-09-23 — accepted at /create-epics; local 4.7.1 compile checks in Verification Required run as the first story of each governed epic, with this ADR's documented fallbacks if any fail)
 
 ## Date
 2026-09-23

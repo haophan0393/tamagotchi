@@ -25,32 +25,243 @@
 # STATUS VALUES: active | deprecated | superseded-by: TR-[system]-NNN
 
 version: 1
-last_updated: ""
+last_updated: "2026-09-23"
 
-requirements: []
+requirements:
 
-# --- EXAMPLE ENTRIES (remove when first real entries are added) ---
-#
-# - id: TR-combat-001
-#   system: combat
-#   gdd: design/gdd/combat-system.md
-#   requirement: "Player takes damage from enemies based on attack power minus defence"
-#   created: 2026-03-10
-#   revised: ""
-#   status: active
-#
-# - id: TR-combat-002
-#   system: combat
-#   gdd: design/gdd/combat-system.md
-#   requirement: "Combo window timing is 0.4 seconds between hits"
-#   created: 2026-03-10
-#   revised: "2026-04-01"
-#   status: active
-#
-# - id: TR-combat-003
-#   system: combat
-#   gdd: design/gdd/combat-system.md
-#   requirement: "Old damage formula using raw stats"
-#   created: 2026-03-10
-#   revised: ""
-#   status: superseded-by: TR-combat-001
+  # --- time-service ---
+  - id: TR-time-service-001
+    system: time-service
+    gdd: design/gdd/time-service.md
+    requirement: "Time Service exposes exactly four operations — get_now_utc(), get_elapsed_seconds(since_utc) clamped to max(0, now - since), get_local_calendar_date(utc), is_new_calendar_day(last, current); no other system reads the engine clock (Core Rule 1)"
+    created: 2026-09-23
+    revised: ""
+    status: active
+  - id: TR-time-service-002
+    system: time-service
+    gdd: design/gdd/time-service.md
+    requirement: "TimeService is a plain RefCounted constructed with an injected TimeSource (get_unix_time, get_timezone_bias_minutes in minutes east of UTC); SystemTimeSource at src/core/time/system_time_source.gd is the only file calling engine clock APIs; FakeTimeSource is test-only (Core Rule 2; ADR-0001 §1)"
+    created: 2026-09-23
+    revised: ""
+    status: active
+  - id: TR-time-service-003
+    system: time-service
+    gdd: design/gdd/time-service.md
+    requirement: "A TimeProvider Autoload holds exactly one production TimeService on SystemTimeSource; only the composition root GameRoot reads it; logic classes receive TimeService via _init() (Core Rule 2, AC #10; ADR-0001 §2)"
+    created: 2026-09-23
+    revised: ""
+    status: active
+  - id: TR-time-service-004
+    system: time-service
+    gdd: design/gdd/time-service.md
+    requirement: "Time Service applies no gameplay policy — no offline clamp, no growth meaning of a new day (Core Rule 3)"
+    created: 2026-09-23
+    revised: ""
+    status: active
+  - id: TR-time-service-005
+    system: time-service
+    gdd: design/gdd/time-service.md
+    requirement: "OS lifecycle is translated by one AppLifecycle node into edge-detected app_backgrounded / app_resumed signals (PAUSED/RESUMED and FOCUS_OUT/FOCUS_IN), handled by one ordered resume handler in GameRoot (Open Question on PAUSED/RESUMED; ADR-0001 §4)"
+    created: 2026-09-23
+    revised: ""
+    status: active
+
+  # --- pet-definition-data ---
+  - id: TR-pet-definition-data-001
+    system: pet-definition-data
+    gdd: design/gdd/pet-definition-data.md
+    requirement: "The four needs, four care actions and four life stages are code enums, not data; everything else is loaded definition data (Core Rule 1)"
+    created: 2026-09-23
+    revised: ""
+    status: active
+  - id: TR-pet-definition-data-002
+    system: pet-definition-data
+    gdd: design/gdd/pet-definition-data.md
+    requirement: "Species and form ids are StringName, ^[a-z][a-z0-9_]*$, max 32 chars, unique per type, persisted as plain String, never renamed or reused (Core Rule 2)"
+    created: 2026-09-23
+    revised: ""
+    status: active
+  - id: TR-pet-definition-data-003
+    system: pet-definition-data
+    gdd: design/gdd/pet-definition-data.md
+    requirement: "Definitions are immutable after catalog Ready — setter guards, recursive lock(), read-only arrays, CI lint for SpriteFrames mutators / duplicate() / pet-data load(); shared by reference (Core Rule 3; ADR-0002 §2)"
+    created: 2026-09-23
+    revised: ""
+    status: active
+  - id: TR-pet-definition-data-004
+    system: pet-definition-data
+    gdd: design/gdd/pet-definition-data.md
+    requirement: "SpeciesDefinition schema: id, display_name, palette, egg/baby/child StageDefinitions, >=1 AdultFormDefinition, FormRuleTable, NeedProfile, CareProfile, adult_days_to_nearly_grown >= 1, retired (Core Rule 4)"
+    created: 2026-09-23
+    revised: ""
+    status: active
+  - id: TR-pet-definition-data-005
+    system: pet-definition-data
+    gdd: design/gdd/pet-definition-data.md
+    requirement: "StageDefinition: sprite_set + days_to_advance >= 0; bloop arc egg 0, baby 3, child 4, adult 2 (Core Rule 5)"
+    created: 2026-09-23
+    revised: ""
+    status: active
+  - id: TR-pet-definition-data-006
+    system: pet-definition-data
+    gdd: design/gdd/pet-definition-data.md
+    requirement: "AdultFormDefinition: id, display_name, sprite_set, optional palette_override, hidden, retired; adult threshold is species-level (Core Rule 6)"
+    created: 2026-09-23
+    revised: ""
+    status: active
+  - id: TR-pet-definition-data-007
+    system: pet-definition-data
+    gdd: design/gdd/pet-definition-data.md
+    requirement: "Animation contract — required core set per stage/form, adult extras, egg idle+hatch, fps 1-12, loop; missing names fail validation, no idle fallback (Core Rule 7)"
+    created: 2026-09-23
+    revised: ""
+    status: active
+  - id: TR-pet-definition-data-008
+    system: pet-definition-data
+    gdd: design/gdd/pet-definition-data.md
+    requirement: "Palette is an ordered list of 4-8 Colors; size checked at load (Core Rule 8)"
+    created: 2026-09-23
+    revised: ""
+    status: active
+  - id: TR-pet-definition-data-009
+    system: pet-definition-data
+    gdd: design/gdd/pet-definition-data.md
+    requirement: "NeedProfile per need: decay_per_hour > 0, sad_threshold 0-100, floor >= 0 (Core Rule 9)"
+    created: 2026-09-23
+    revised: ""
+    status: active
+  - id: TR-pet-definition-data-010
+    system: pet-definition-data
+    gdd: design/gdd/pet-definition-data.md
+    requirement: "CareProfile per action: restore_amount 1-100; action->need map fixed in code (Core Rule 10)"
+    created: 2026-09-23
+    revised: ""
+    status: active
+  - id: TR-pet-definition-data-011
+    system: pet-definition-data
+    gdd: design/gdd/pet-definition-data.md
+    requirement: "FormRuleTable: window_days >= 1, ordered FormRules of 1-2 ShareConditions on distinct actions, mandatory default_form_id, authored order preserved (Core Rule 11)"
+    created: 2026-09-23
+    revised: ""
+    status: active
+  - id: TR-pet-definition-data-012
+    system: pet-definition-data
+    gdd: design/gdd/pet-definition-data.md
+    requirement: "Load-time validation via a pure CatalogValidator — dev (strict) hard error, release excludes the species; unreachable rule (min_share sum > 1.0) warns in all builds (Core Rule 12; ADR-0002 §4)"
+    created: 2026-09-23
+    revised: ""
+    status: active
+  - id: TR-pet-definition-data-013
+    system: pet-definition-data
+    gdd: design/gdd/pet-definition-data.md
+    requirement: "PetCatalog lookups get_species, get_form, get_all_species (incl. retired), get_hatchable_species; unknown id returns null; String argument behaves as StringName (Core Rule 13; ADR-0002 §4)"
+    created: 2026-09-23
+    revised: ""
+    status: active
+  - id: TR-pet-definition-data-014
+    system: pet-definition-data
+    gdd: design/gdd/pet-definition-data.md
+    requirement: "Adding a species is a new .tres plus a manifest entry (ext_resource reference), never a code change; schema change after first dependent needs an ADR (Core Rule 14; ADR-0002 §3)"
+    created: 2026-09-23
+    revised: ""
+    status: active
+
+  # --- need-system ---
+  - id: TR-need-system-001
+    system: need-system
+    gdd: design/gdd/need-system.md
+    requirement: "Four needs fixed in code (hunger, cleanliness, fun, sleep); no fifth need (Core Rule 1)"
+    created: 2026-09-23
+    revised: ""
+    status: active
+  - id: TR-need-system-002
+    system: need-system
+    gdd: design/gdd/need-system.md
+    requirement: "Need System owns the 0-100 float scale; int profile values compared against the float value (Core Rule 2)"
+    created: 2026-09-23
+    revised: ""
+    status: active
+  - id: TR-need-system-003
+    system: need-system
+    gdd: design/gdd/need-system.md
+    requirement: "A need is anchor_value + anchor_utc; value computed on read from elapsed time, never accumulated (Core Rule 3)"
+    created: 2026-09-23
+    revised: ""
+    status: active
+  - id: TR-need-system-004
+    system: need-system
+    gdd: design/gdd/need-system.md
+    requirement: "One decay rule online and offline — no second decay path (Core Rule 4)"
+    created: 2026-09-23
+    revised: ""
+    status: active
+  - id: TR-need-system-005
+    system: need-system
+    gdd: design/gdd/need-system.md
+    requirement: "Every mutation re-anchors: compute value(now), write it as anchor_value with anchor_utc = now (Core Rule 5)"
+    created: 2026-09-23
+    revised: ""
+    status: active
+  - id: TR-need-system-006
+    system: need-system
+    gdd: design/gdd/need-system.md
+    requirement: "decay_per_hour fixed for the life of an anchor; a rate change must re-anchor first (Core Rule 6)"
+    created: 2026-09-23
+    revised: ""
+    status: active
+  - id: TR-need-system-007
+    system: need-system
+    gdd: design/gdd/need-system.md
+    requirement: "Care restores by re-anchoring upward: clamp(value(now) + restore_amount, floor, 100), all four needs; restoring at 100 is legal (Core Rule 7)"
+    created: 2026-09-23
+    revised: ""
+    status: active
+  - id: TR-need-system-008
+    system: need-system
+    gdd: design/gdd/need-system.md
+    requirement: "Decay stops at floor; no death, cascade or penalty (Core Rule 8)"
+    created: 2026-09-23
+    revised: ""
+    status: active
+  - id: TR-need-system-009
+    system: need-system
+    gdd: design/gdd/need-system.md
+    requirement: "Sleep is press-restored via apply_care(lights) like any other need; no dark flag (Core Rule 9)"
+    created: 2026-09-23
+    revised: ""
+    status: active
+  - id: TR-need-system-010
+    system: need-system
+    gdd: design/gdd/need-system.md
+    requirement: "State derived from value(now) with precedence CONTENT > AT_FLOOR > SAD; never stored; is_sad true for SAD and AT_FLOOR (Core Rule 10)"
+    created: 2026-09-23
+    revised: ""
+    status: active
+  - id: TR-need-system-011
+    system: need-system
+    gdd: design/gdd/need-system.md
+    requirement: "Urgency ranking: sad needs ascending by value, ties by enum order; empty array when none (Core Rule 11)"
+    created: 2026-09-23
+    revised: ""
+    status: active
+  - id: TR-need-system-012
+    system: need-system
+    gdd: design/gdd/need-system.md
+    requirement: "Need System never reads the wall clock; time from injected TimeService; no engine Timer in the logic layer (Core Rule 12; ADR-0001)"
+    created: 2026-09-23
+    revised: ""
+    status: active
+  - id: TR-need-system-013
+    system: need-system
+    gdd: design/gdd/need-system.md
+    requirement: "Need System owns the live anchors; Save reads and returns copies, never a live reference (Core Rule 13; accessor shape pending ADR-0003)"
+    created: 2026-09-23
+    revised: ""
+    status: active
+  - id: TR-need-system-014
+    system: need-system
+    gdd: design/gdd/need-system.md
+    requirement: "Crossing detection: pure idempotent check_crossings() emitting need_became_sad, next_crossing_utc(), on_resumed() entry; NeedCrossingScheduler adapter arms one Timer (Core Rule 14; ADR-0001 §4-5)"
+    created: 2026-09-23
+    revised: ""
+    status: active
