@@ -4,7 +4,7 @@
 > **GDD**: design/gdd/need-system.md
 > **Architecture Module**: `src/gameplay/needs/` (pure `NeedSystem` logic + `NeedCrossingScheduler` adapter). *No `docs/architecture/architecture.md` exists (compressed path, 2026-09-22) — module boundaries are taken from ADR-0001 §2, §5 and ADR-0002 §5.*
 > **Status**: Ready
-> **Stories**: Not yet created — run `/create-stories need-system`
+> **Stories**: 7 created 2026-09-23 — see table below
 
 ## Overview
 
@@ -63,6 +63,20 @@ is constructed as `NeedSystem._init(time: TimeService, needs: NeedProfile, care:
 - **Stale registry**: `design/registry/entities.yaml` Need System entries predate
   the 2026-09-22 revision (rate-switched sleep). Stories use the GDD, not the registry.
 
+## Stories
+
+| # | Story | Type | Status | ADR |
+|---|-------|------|--------|-----|
+| 001 | [Need anchors, need_value and derived state](story-001-need-value-and-state.md) | Logic | Ready | ADR-0001, ADR-0002 |
+| 002 | [apply_care, re-anchoring and the care signals](story-002-apply-care-and-signals.md) | Logic | Ready | ADR-0002, ADR-0001 |
+| 003 | [Queries: seconds_until_sad, next_crossing_utc, urgency ranking](story-003-need-queries.md) | Logic | Ready | ADR-0001 |
+| 004 | [Crossing detection: check_crossings and on_resumed](story-004-crossing-detection.md) | Logic | Ready | ADR-0001 |
+| 005 | [Anchor set copy semantics for Save](story-005-anchor-ownership.md) | Logic | Ready (names provisional) | N/A — pending ADR-0003 |
+| 006 | [NeedCrossingScheduler and GameRoot wiring](story-006-scheduler-and-wiring.md) | Integration | Ready | ADR-0001, ADR-0002 |
+| 007 | [On-device crossing check (ADVISORY)](story-007-on-device-crossing-check.md) | Integration (manual) | Ready — needs export presets + devices | ADR-0001 |
+
+Build order: 001 → 002 → 003 and 004 (either order) → then 005 and 006 (005 needs 004; 006 needs 002–004) → 007. Story 001 needs Time Service 002 and Pet Definition Data 002; Story 006 needs Time Service 004 and Pet Definition Data 007.
+
 ## Definition of Done
 
 This epic is complete when:
@@ -73,4 +87,4 @@ This epic is complete when:
 
 ## Next Step
 
-Run `/create-stories need-system` to break this epic into implementable stories.
+Start with the foundation epics. Once their prerequisites are done, run `/story-readiness production/epics/need-system/story-001-need-value-and-state.md`.

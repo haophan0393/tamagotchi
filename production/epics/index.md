@@ -5,9 +5,9 @@ Engine: Godot 4.7.1
 
 | Epic | Layer | System | GDD | Stories | Status |
 |------|-------|--------|-----|---------|--------|
-| [Time Service](time-service/EPIC.md) | Foundation | Time Service | design/gdd/time-service.md | Not yet created | Ready |
-| [Pet Definition Data](pet-definition-data/EPIC.md) | Foundation | Pet Definition Data | design/gdd/pet-definition-data.md | Not yet created | Ready |
-| [Need System](need-system/EPIC.md) | Core | Need System | design/gdd/need-system.md | Not yet created | Ready |
+| [Time Service](time-service/EPIC.md) | Foundation | Time Service | design/gdd/time-service.md | 5 stories | Ready |
+| [Pet Definition Data](pet-definition-data/EPIC.md) | Foundation | Pet Definition Data | design/gdd/pet-definition-data.md | 9 stories | Ready |
+| [Need System](need-system/EPIC.md) | Core | Need System | design/gdd/need-system.md | 7 stories | Ready |
 
 **Build order**: Time Service → Pet Definition Data → Need System. Need System's
 stories depend on both foundation epics' interfaces.

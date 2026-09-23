@@ -4,7 +4,7 @@
 > **GDD**: design/gdd/time-service.md
 > **Architecture Module**: `src/core/time/` (clock abstraction and service) + `src/core/app/` (composition root and lifecycle adapter). *No `docs/architecture/architecture.md` exists (compressed path, 2026-09-22) — module boundaries are taken from ADR-0001 §1–4.*
 > **Status**: Ready
-> **Stories**: Not yet created — run `/create-stories time-service`
+> **Stories**: 5 created 2026-09-23 — see table below
 
 ## Overview
 
@@ -42,9 +42,9 @@ adapter with the single ordered resume handler. Later epics add their systems to
   plain base class whose methods `push_error()` and `return 0` (interface unchanged).
   Correct `docs/engine-reference/godot/current-best-practices.md` once confirmed.
 - **Existing test**: `tests/unit/time_service/time_service_contract_test.gd` is
-  specification-first. Implement by changing the one `ServiceUnderTest` line to
-  preload the real script, and move its inner fake to
-  `tests/helpers/fake_time_source.gd`. Do not fork the tests.
+  specification-first. Point `ServiceUnderTest` and the two `RefTimeService` type
+  annotations at the real class, delete the inner reference classes, and use
+  `tests/helpers/fake_time_source.gd`. No assertion changes. Do not fork the tests.
 - **CI**: the `clock-discipline` job exempts only `src/core/time/system_time_source.gd`
   — that path is part of the contract. ADR-0001 Risks adds a second grep:
   `TimeProvider` may appear only under `src/core/app/` and `src/core/time/`.
@@ -58,6 +58,16 @@ adapter with the single ordered resume handler. Later epics add their systems to
 - **Open GDD questions not blocking this epic**: bounded timestamp domain and the
   anchor-timestamp contract (→ ADR-0003 / Save GDD); DST limitation wording.
 
+## Stories
+
+| # | Story | Type | Status | ADR |
+|---|-------|------|--------|-----|
+| 001 | [TimeSource abstraction and test clock](story-001-time-source-abstraction.md) | Logic | Ready | ADR-0001 |
+| 002 | [TimeService production implementation](story-002-time-service-implementation.md) | Logic | Ready | ADR-0001 |
+| 003 | [TimeProvider Autoload and GameRoot composition root](story-003-time-provider-and-game-root.md) | Integration | Ready | ADR-0001 |
+| 004 | [AppLifecycle adapter and resume/background handler slots](story-004-app-lifecycle-adapter.md) | Integration | Ready | ADR-0001 |
+| 005 | [On-device lifecycle and timezone verification](story-005-on-device-verification.md) | Integration (manual) | Ready — needs export presets + devices | ADR-0001 |
+
 ## Definition of Done
 
 This epic is complete when:
@@ -69,4 +79,4 @@ This epic is complete when:
 
 ## Next Step
 
-Run `/create-stories time-service` to break this epic into implementable stories.
+Run `/story-readiness production/epics/time-service/story-001-time-source-abstraction.md`, then `/dev-story` on it.

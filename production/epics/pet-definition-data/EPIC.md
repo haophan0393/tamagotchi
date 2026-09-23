@@ -4,7 +4,7 @@
 > **GDD**: design/gdd/pet-definition-data.md
 > **Architecture Module**: `src/core/pet_data/` (schema, validator, loader, catalog) + `assets/data/pets/` (manifest and `bloop` content). *No `docs/architecture/architecture.md` exists (compressed path, 2026-09-22) — module boundaries are taken from ADR-0002 §1–5.*
 > **Status**: Ready
-> **Stories**: Not yet created — run `/create-stories pet-definition-data`
+> **Stories**: 9 created 2026-09-23 — see table below
 
 ## Overview
 
@@ -70,6 +70,22 @@ loads the catalog synchronously in `_ready()` before any logic object is built.
   LCD Renderer), OQ#5 (Life Stage & Growth), OQ#10 (zero hatchable species,
   Hatching Onboarding), OQ#13 backlog items.
 
+## Stories
+
+| # | Story | Type | Status | ADR |
+|---|-------|------|--------|-----|
+| 001 | [Code enums and the DefinitionResource base](story-001-enums-and-definition-base.md) | Logic | Ready | ADR-0002 |
+| 002 | [Schema classes, guarded setters and the test factory](story-002-schema-classes.md) | Logic | Ready | ADR-0002 |
+| 003 | [CatalogValidator, part 1 (ids, structure, ranges, palette)](story-003-validator-structure.md) | Logic | Ready (GDD Rule 12 amendment first) | ADR-0002 |
+| 004 | [CatalogValidator, part 2 (form rules and animation contract)](story-004-validator-rules-and-animations.md) | Logic | Ready | ADR-0002 |
+| 005 | [PetCatalog and build_catalog](story-005-pet-catalog.md) | Logic | Ready | ADR-0002 |
+| 006 | [Formula contracts: care_action_share and total_arc_days](story-006-formula-contracts.md) | Logic | Ready | N/A (pure math) |
+| 007 | [bloop content, manifest, loader I/O and GameRoot boot](story-007-bloop-content-and-boot-load.md) | Integration | Ready | ADR-0002, ADR-0001 |
+| 008 | [CI lint for pet-data forbidden patterns](story-008-pet-data-ci-lint.md) | Integration | Ready | ADR-0002 |
+| 009 | [Export verification on Android and iOS](story-009-export-verification.md) | Integration (manual) | Ready — needs export presets + devices | ADR-0002 |
+
+Build order: 001 → 002 → (003, 004, 006 in any order) → 005 → 007 → 008 → 009.
+
 ## Definition of Done
 
 This epic is complete when:
@@ -81,4 +97,4 @@ This epic is complete when:
 
 ## Next Step
 
-Run `/create-stories pet-definition-data` to break this epic into implementable stories.
+Run `/story-readiness production/epics/pet-definition-data/story-001-enums-and-definition-base.md`, then `/dev-story` on it.
