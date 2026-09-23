@@ -72,15 +72,22 @@ This supplements (not replaces) the agent's built-in knowledge.
           print(prefix, ": ", v)
   ```
 
-- **Abstract classes and methods**: Use `@abstract` to enforce inheritance
+- **Abstract classes and methods**: Use `@abstract` to enforce inheritance.
+  Abstract methods must be **body-less** — a `pass` (or any other) body is a
+  parse error: `Parse Error: An abstract function cannot have a body.`
+  Verified locally on 4.7.1 (ADR-0001 Verification #4, 2026-09-23; corrects an
+  earlier, incorrect version of this snippet that showed a `pass` body).
   ```gdscript
   @abstract
   class_name BaseEnemy extends CharacterBody3D
 
-  @abstract
-  func get_attack_pattern() -> Array[Attack]:
-      pass  # Subclasses MUST override
+  @abstract func get_attack_pattern() -> Array[Attack]  # Subclasses MUST override
   ```
+  A statically-typed `BaseEnemy.new()` (i.e. the compiler knows the static type
+  is the abstract class) is a compile-time `Parse Error: Cannot construct
+  abstract class`. Both a `class_name` script in another directory and an
+  inner class inside another script can `extend` an abstract class and be
+  instantiated normally (Verification #5).
 
 - **Script backtracing**: Detailed call stacks available even in Release builds
 

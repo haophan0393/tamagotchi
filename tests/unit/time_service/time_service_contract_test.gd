@@ -7,8 +7,8 @@
 ## [b]Status: specification-first.[/b] Time Service has no production
 ## implementation yet — it is scheduled for the Foundation-layer /dev-story pass.
 ## Until then the reference implementation lives in this file as the
-## [code]RefTimeService[/code] / [code]FakeTimeSource[/code] inner classes, which
-## encode the contract exactly as the GDD specifies it.
+## [code]RefTimeService[/code] inner class, which
+## encodes the contract exactly as the GDD specifies it.
 ##
 ## [b]When the real Time Service lands[/b], the /dev-story pass changes ONE line —
 ## the [code]ServiceUnderTest[/code] constant below — to preload the production
@@ -38,27 +38,9 @@ const TZ_LOS_ANGELES := -480
 
 
 #region Test doubles
-## Injectable clock. The production counterpart (SystemTimeSource) is the only
-## place in the codebase permitted to call Time.get_unix_time_from_system().
-class FakeTimeSource:
-	extends RefCounted
-
-	var _now: int
-	var _tz_bias_minutes: int
-
-	func _init(now: int, tz_bias_minutes: int = 0) -> void:
-		_now = now
-		_tz_bias_minutes = tz_bias_minutes
-
-	func get_unix_time() -> int:
-		return _now
-
-	func get_timezone_bias_minutes() -> int:
-		return _tz_bias_minutes
-
-	## Moves the injected clock. Used instead of a real sleep — see AC #2.
-	func advance(seconds: int) -> void:
-		_now += seconds
+## FakeTimeSource is the shared test double in tests/helpers/fake_time_source.gd
+## (removed from here in time-service Story 001 — a same-named inner class is a
+## parse error once the global class_name exists).
 
 
 ## Reference implementation of the GDD's four operations. Stateless per call.

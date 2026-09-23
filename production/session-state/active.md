@@ -326,3 +326,17 @@ carries over. Do not fork the tests.
 
 **Planning:**
 - 3-week MVP estimate was set top-down — verify via `/sprint-plan` once epics exist
+
+## Session Extract — /dev-story 2026-09-23
+- Story: production/epics/time-service/story-001-time-source-abstraction.md — TimeSource abstraction and test clock
+- Files changed: src/core/time/time_source.gd, src/core/time/system_time_source.gd, tests/helpers/fake_time_source.gd, tests/unit/time_service/time_source_test.gd (8 tests), tests/unit/time_service/time_service_contract_test.gd (inner FakeTimeSource removed — was a parse error vs the global class), docs/engine-reference/godot/current-best-practices.md
+- ADR-0001 Verification #4 and #5: PASS on local 4.7.1 — @abstract path, no fallback
+- Test run: 20/20 pass; clock-discipline OK
+- Blockers: None
+- Next: /code-review then /story-done on story 001; then story 002 (its contract-test swap is now smaller — inner FakeTimeSource already gone)
+
+## Session Extract — /story-done 2026-09-23
+- Verdict: COMPLETE WITH NOTES
+- Story: production/epics/time-service/story-001-time-source-abstraction.md — TimeSource abstraction and test clock
+- Tech debt logged: None (test-naming standard conflict noted in story only)
+- Next recommended: production/epics/time-service/story-002-time-service-implementation.md (or pet-definition-data story 001 in parallel)

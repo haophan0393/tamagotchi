@@ -1,12 +1,12 @@
 # Story 001: TimeSource abstraction and test clock
 
 > **Epic**: Time Service
-> **Status**: Ready
+> **Status**: Complete
 > **Layer**: Foundation
 > **Type**: Logic
 > **Estimate**: S (~2 h)
 > **Manifest Version**: N/A — no control manifest (compressed path); rules below come from `docs/registry/architecture.yaml` forbidden_patterns (2026-09-23)
-> **Last Updated**: [set by /dev-story when implementation begins]
+> **Last Updated**: 2026-09-23
 
 ## Context
 
@@ -31,11 +31,11 @@
 
 *From GDD `design/gdd/time-service.md` Core Rule 2 and ADR-0001 §1, scoped to this story:*
 
-- [ ] Verification #4 and #5 run on local 4.7.1 and their results recorded in this story's completion notes (pass, or fallback applied)
-- [ ] `src/core/time/time_source.gd` declares `@abstract class_name TimeSource extends RefCounted` with exactly two abstract methods: `get_unix_time() -> int` and `get_timezone_bias_minutes() -> int` (minutes **east** of UTC)
-- [ ] `src/core/time/system_time_source.gd` returns `floori(Time.get_unix_time_from_system())` and `Time.get_time_zone_from_system().bias`, and is the only file under `src/` calling an engine clock API (the `clock-discipline` job passes)
-- [ ] `tests/helpers/fake_time_source.gd` (`class_name FakeTimeSource extends TimeSource`) has a settable `now` and bias and an `advance(seconds)` method
-- [ ] `docs/engine-reference/godot/current-best-practices.md` corrected to match what Verification #4 showed
+- [x] Verification #4 and #5 run on local 4.7.1 and their results recorded in this story's completion notes (pass, or fallback applied)
+- [x] `src/core/time/time_source.gd` declares `@abstract class_name TimeSource extends RefCounted` with exactly two abstract methods: `get_unix_time() -> int` and `get_timezone_bias_minutes() -> int` (minutes **east** of UTC)
+- [x] `src/core/time/system_time_source.gd` returns `floori(Time.get_unix_time_from_system())` and `Time.get_time_zone_from_system().bias`, and is the only file under `src/` calling an engine clock API (the `clock-discipline` job passes)
+- [x] `tests/helpers/fake_time_source.gd` (`class_name FakeTimeSource extends TimeSource`) has a settable `now` and bias and an `advance(seconds)` method
+- [x] `docs/engine-reference/godot/current-best-practices.md` corrected to match what Verification #4 showed
 
 ---
 
@@ -101,7 +101,7 @@
 **Required evidence**:
 - Logic: `tests/unit/time_service/time_source_test.gd` — must exist and pass
 
-**Status**: [ ] Not yet created
+**Status**: [x] Created — 10 tests, passing
 
 ---
 
@@ -109,3 +109,22 @@
 
 - Depends on: None
 - Unlocks: Story 002
+
+---
+
+## Completion Notes (2026-09-23, /dev-story)
+
+**Path taken: `@abstract` — no fallback.** Probes run headless on local Godot 4.7.1.stable.official.a13da4feb:
+- **Verification #4** — body-less `@abstract func get_unix_time() -> int` in an `@abstract class_name ... extends RefCounted` compiles. A `pass` body is a hard parse error (`An abstract function cannot have a body.`). Statically-typed `TimeSource.new()` is a compile error (`Cannot construct abstract class "TimeSource"`), so AC-5 is enforced by the compiler. Caveat: `.new()` on a dynamically `load()`ed GDScript bypasses the check.
+- **Verification #5** — both a `class_name` script in `tests/helpers/` and an inner class inside a test suite can `extends TimeSource`; `is TimeSource` is true and values round-trip.
+- `current-best-practices.md` corrected to the body-less form.
+
+**Deviation:** the global `class_name FakeTimeSource` made the contract test's same-named inner class a **parse error** (not a warning), which aborted suite discovery. The inner `FakeTimeSource` was deleted from `time_service_contract_test.gd` (the global one has an identical API). This pulls one piece of Story 002 forward; `RefTimeService` and the `ServiceUnderTest` swap remain Story 002's.
+
+**Results:** full suite 20/20 pass (8 new in `time_source_test.gd` + 12 contract). Clock-discipline grep: only `src/core/time/system_time_source.gd` matches pre-exemption; OK post-exemption.
+
+**Completed**: 2026-09-23
+**Criteria**: 5/5 passing (none deferred)
+**Deviations**: (1) inner `FakeTimeSource` removed from `time_service_contract_test.gd` (Story 002 scope, see above); (2) `/code-review` added `set_now()` / `set_bias_minutes()` to `FakeTimeSource` with 2 tests beyond the listed QA cases; (3) test names follow coding-standards `test_[scenario]_[expected]`, which conflicts with `.claude/rules/test-standards.md` `test_[system]_[scenario]_[expected]` — standards need reconciling.
+**Test Evidence**: Logic — `tests/unit/time_service/time_source_test.gd` (10 tests); full suite 22/22 pass (the 20/20 above was before code review)
+**Code Review**: Complete — APPROVED WITH SUGGESTIONS, both suggestions applied (AC-4 now calls through a `TimeSource`-typed reference)
