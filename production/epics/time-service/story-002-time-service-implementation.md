@@ -1,12 +1,12 @@
 # Story 002: TimeService production implementation
 
 > **Epic**: Time Service
-> **Status**: Ready
+> **Status**: Complete
 > **Layer**: Foundation
 > **Type**: Logic
 > **Estimate**: S (~2 h)
 > **Manifest Version**: N/A — no control manifest (compressed path); rules below come from `docs/registry/architecture.yaml` forbidden_patterns (2026-09-23)
-> **Last Updated**: [set by /dev-story when implementation begins]
+> **Last Updated**: 2026-09-23
 
 ## Context
 
@@ -96,7 +96,7 @@ These already exist in `tests/unit/time_service/time_service_contract_test.gd` a
 **Required evidence**:
 - Logic: `tests/unit/time_service/time_service_contract_test.gd` — must exist and pass (existing file, swapped to production)
 
-**Status**: [ ] Not yet created (file exists; not yet running against production code)
+**Status**: [x] Passing against production — 12 tests (2026-09-23)
 
 ---
 
@@ -104,3 +104,15 @@ These already exist in `tests/unit/time_service/time_service_contract_test.gd` a
 
 - Depends on: Story 001 must be DONE
 - Unlocks: Story 003
+
+---
+
+## Completion Notes
+**Completed**: 2026-09-23
+**Criteria**: 10/10 passing (all auto-verified; suite 22/22, clock-discipline lint OK)
+**Deviations**:
+- ADVISORY — `ServiceUnderTest` is `preload("res://src/core/time/time_service.gd")`, not `:= TimeService`: Godot 4.7.1 rejects a global `class_name` as a constant expression (verified by probe). Functionally equivalent.
+- ADVISORY — AC #9 test re-derives only elapsed seconds (bias-independent) across the three timezones; the date path is exercised under UTC only. Follow-up: repeat `get_local_calendar_date` under Tokyo/LA.
+**Follow-ups from /code-review** (non-blocking): pre-epoch / negative-bias timestamps unpinned by tests (→ ADR-0003 test plan); no null guard on `_init(source)` (low risk — single composition root).
+**Test Evidence**: Logic: `tests/unit/time_service/time_service_contract_test.gd`
+**Code Review**: Complete — APPROVED WITH SUGGESTIONS (godot-gdscript-specialist + qa-tester)

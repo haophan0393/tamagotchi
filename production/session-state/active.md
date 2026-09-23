@@ -340,3 +340,18 @@ carries over. Do not fork the tests.
 - Story: production/epics/time-service/story-001-time-source-abstraction.md — TimeSource abstraction and test clock
 - Tech debt logged: None (test-naming standard conflict noted in story only)
 - Next recommended: production/epics/time-service/story-002-time-service-implementation.md (or pet-definition-data story 001 in parallel)
+
+## Session Extract — /dev-story 2026-09-23 (story 002)
+- Story: production/epics/time-service/story-002-time-service-implementation.md — TimeService production implementation
+- Files changed: src/core/time/time_service.gd (new, + .uid), tests/unit/time_service/time_service_contract_test.gd (RefTimeService removed, runs against production)
+- Test written: tests/unit/time_service/time_service_contract_test.gd (12 tests, unchanged assertions); suite 22/22 pass; clock-discipline lint OK
+- Deviation: `const ServiceUnderTest := TimeService` is not a constant expression in 4.7.1 → used preload("res://src/core/time/time_service.gd")
+- Engine note: global class_name can't be a const initializer — preload the script instead
+- Blockers: None
+- Next: /code-review src/core/time/time_service.gd tests/unit/time_service/time_service_contract_test.gd then /story-done on story 002; then story 003
+
+## Session Extract — /story-done 2026-09-23 (story 002)
+- Verdict: COMPLETE WITH NOTES
+- Story: production/epics/time-service/story-002-time-service-implementation.md — TimeService production implementation
+- Tech debt logged: None (follow-ups recorded in story Completion Notes)
+- Next recommended: production/epics/time-service/story-003-time-provider-and-game-root.md (or pet-definition-data story 001 in parallel)

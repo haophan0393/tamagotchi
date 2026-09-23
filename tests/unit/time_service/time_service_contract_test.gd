@@ -4,15 +4,13 @@
 ## Criterion it encodes. Formulas: elapsed_seconds, is_new_calendar_day
 ## (design/registry/entities.yaml).
 ##
-## [b]Status: specification-first.[/b] Time Service has no production
-## implementation yet — it is scheduled for the Foundation-layer /dev-story pass.
-## Until then the reference implementation lives in this file as the
-## [code]RefTimeService[/code] inner class, which
-## encodes the contract exactly as the GDD specifies it.
-##
-## [b]When the real Time Service lands[/b], the /dev-story pass changes ONE line —
-## the [code]ServiceUnderTest[/code] constant below — to preload the production
-## script. Every assertion carries over unchanged. Do not fork these tests.
+## [b]Status: runs against production.[/b] This suite now exercises the real
+## [TimeService] (src/core/time/time_service.gd), constructed with the shared
+## [code]FakeTimeSource[/code] test double from tests/helpers/fake_time_source.gd.
+## The former [code]RefTimeService[/code] reference implementation that used to
+## live in this file has been deleted — [TimeService] ported its four method
+## bodies exactly (Story 002). Every assertion below is unchanged from the
+## specification-first version. Do not fork these tests.
 ##
 ## Determinism (AC #9): no test here touches the real wall clock. Every instance
 ## is constructed with a FakeTimeSource whose time AND timezone offset are both
@@ -23,8 +21,10 @@ class_name TimeServiceContractTest
 extends GdUnitTestSuite
 
 
-## The implementation under test. Swap this to the production script when it exists.
-const ServiceUnderTest := RefTimeService
+## The implementation under test. Preloaded rather than referenced by its global
+## [code]class_name[/code] — a global class name is not a constant expression,
+## so [code]const ServiceUnderTest := TimeService[/code] fails to parse.
+const ServiceUnderTest := preload("res://src/core/time/time_service.gd")
 
 ## 2026-09-18 11:58:00 PM in a UTC+0 locale, as a UTC unix epoch.
 const SEP_18_2358_UTC := 1789775880
@@ -37,39 +37,11 @@ const TZ_TOKYO := 540
 const TZ_LOS_ANGELES := -480
 
 
-#region Test doubles
-## FakeTimeSource is the shared test double in tests/helpers/fake_time_source.gd
-## (removed from here in time-service Story 001 — a same-named inner class is a
-## parse error once the global class_name exists).
-
-
-## Reference implementation of the GDD's four operations. Stateless per call.
-class RefTimeService:
-	extends RefCounted
-
-	var _source: FakeTimeSource
-
-	func _init(source: FakeTimeSource) -> void:
-		_source = source
-
-	func get_now_utc() -> int:
-		return _source.get_unix_time()
-
-	func get_elapsed_seconds(since_utc: int) -> int:
-		return maxi(0, get_now_utc() - since_utc)
-
-	func get_local_calendar_date(utc_timestamp: int) -> Dictionary:
-		var local := utc_timestamp + _source.get_timezone_bias_minutes() * 60
-		var dt := Time.get_datetime_dict_from_unix_time(local)
-		return {"year": dt.year, "month": dt.month, "day": dt.day}
-
-	func is_new_calendar_day(last_utc: int, current_utc: int) -> bool:
-		return get_local_calendar_date(last_utc) != get_local_calendar_date(current_utc)
-#endregion
+## FakeTimeSource is the shared test double in tests/helpers/fake_time_source.gd.
 
 
 ## Builds a service wired to a fake clock at [param now] in timezone [param tz_bias].
-func _service_at(now: int, tz_bias: int = TZ_UTC) -> RefTimeService:
+func _service_at(now: int, tz_bias: int = TZ_UTC) -> TimeService:
 	return ServiceUnderTest.new(FakeTimeSource.new(now, tz_bias))
 
 
@@ -85,7 +57,7 @@ func test_get_now_utc_returns_injected_time() -> void:
 ## .claude/docs/coding-standards.md ("no time-dependent assertions").
 func test_get_now_utc_advances_with_the_injected_clock() -> void:
 	var source := FakeTimeSource.new(1000)
-	var service: RefTimeService = ServiceUnderTest.new(source)
+	var service: TimeService = ServiceUnderTest.new(source)
 
 	var first := service.get_now_utc()
 	source.advance(1)
