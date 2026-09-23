@@ -1,6 +1,10 @@
-[gd_scene load_steps=2 format=3 uid="uid://bkplynyfn5rs5"]
+[gd_scene load_steps=3 format=3 uid="uid://bkplynyfn5rs5"]
 
 [ext_resource type="Script" path="res://src/core/app/game_root.gd" id="1_game_root"]
+[ext_resource type="Script" path="res://src/core/app/app_lifecycle.gd" id="2_app_lifecycle"]
 
 [node name="GameRoot" type="Node"]
 script = ExtResource("1_game_root")
+
+[node name="AppLifecycle" type="Node" parent="."]
+script = ExtResource("2_app_lifecycle")

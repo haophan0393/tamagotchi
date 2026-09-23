@@ -1,12 +1,12 @@
 # Story 004: AppLifecycle adapter and resume/background handler slots
 
 > **Epic**: Time Service
-> **Status**: Ready
+> **Status**: Complete
 > **Layer**: Foundation
 > **Type**: Integration
 > **Estimate**: S–M (~2–3 h)
 > **Manifest Version**: N/A — no control manifest (compressed path); rules below come from `docs/registry/architecture.yaml` forbidden_patterns (2026-09-23)
-> **Last Updated**: [set by /dev-story when implementation begins]
+> **Last Updated**: 2026-09-23
 
 ## Context
 
@@ -31,11 +31,11 @@
 
 *From ADR-0001 §4, scoped to this story:*
 
-- [ ] `src/core/app/app_lifecycle.gd` — `class_name AppLifecycle extends Node` with `signal app_backgrounded` and `signal app_resumed`
-- [ ] `PAUSED` alone, `FOCUS_OUT` alone, and `PAUSED` + `FOCUS_OUT` in either order each emit `app_backgrounded` exactly once; the same holds for `RESUMED` / `FOCUS_IN` → `app_resumed`
-- [ ] A repeated resume notification with no background in between emits nothing
-- [ ] `AppLifecycle` is a child of `GameRoot` in `GameRoot.tscn`, and `GameRoot` connects both signals to `_on_app_backgrounded()` / `_on_app_resumed()`
-- [ ] `GameRoot._on_app_resumed()` contains the three ordered slots from ADR-0001 §4 — (1) `offline_sim.reanchor_with_cap(...)`, (2) `needs.on_resumed()`, (3) `crossing_scheduler.rearm()` — as no-ops with comments until those systems exist; `_on_app_backgrounded()` contains the save-request slot (ADR-0003)
+- [x] `src/core/app/app_lifecycle.gd` — `class_name AppLifecycle extends Node` with `signal app_backgrounded` and `signal app_resumed`
+- [x] `PAUSED` alone, `FOCUS_OUT` alone, and `PAUSED` + `FOCUS_OUT` in either order each emit `app_backgrounded` exactly once; the same holds for `RESUMED` / `FOCUS_IN` → `app_resumed`
+- [x] A repeated resume notification with no background in between emits nothing
+- [x] `AppLifecycle` is a child of `GameRoot` in `GameRoot.tscn`, and `GameRoot` connects both signals to `_on_app_backgrounded()` / `_on_app_resumed()`
+- [x] `GameRoot._on_app_resumed()` contains the three ordered slots from ADR-0001 §4 — (1) `offline_sim.reanchor_with_cap(...)`, (2) `needs.on_resumed()`, (3) `crossing_scheduler.rearm()` — as no-ops with comments until those systems exist; `_on_app_backgrounded()` contains the save-request slot (ADR-0003)
 
 ---
 
@@ -100,7 +100,7 @@
 **Required evidence**:
 - Integration: `tests/integration/time_service/app_lifecycle_test.gd` — must exist and pass
 
-**Status**: [ ] Not yet created
+**Status**: [x] Created — 9 tests, passing
 
 ---
 
@@ -108,3 +108,14 @@
 
 - Depends on: Story 003 must be DONE
 - Unlocks: Story 005; Need System epic's resume-wiring story
+
+---
+
+## Completion Notes
+**Completed**: 2026-09-23
+**Criteria**: 5/5 passing (none deferred)
+**Test-Criterion Traceability**: AC-1 through AC-4 COVERED by direct tests; AC-5 (ordered no-op resume slots) UNTESTED — no observable side effect exists to assert until the Need System epic supplies real collaborators (Out of Scope, acknowledged in the story itself). 1/5 untested (20%) — ADVISORY, does not block.
+**Deviations**: None (implementation matches ADR-0001 §4 and TR-time-service-005 exactly; no forbidden patterns, no hardcoded values, no out-of-scope files touched)
+**Test Evidence**: Integration — `tests/integration/time_service/app_lifecycle_test.gd` (9 tests); full suite 34/34 pass
+**Code Review**: Complete — `/code-review` APPROVED WITH SUGGESTIONS (2026-09-23). godot-specialist: CLEAN, no on-device-risk resolution beyond ADR framing. godot-gdscript-specialist: 2 WARN, both fixed (`@onready` node ref; typed `Dictionary[String, int]`). qa-tester: 3 coverage gaps found, 2 fixed (added FOCUS_IN-before-RESUMED test; wrapped AC-6 notification calls in `assert_error().is_success()`, probe-verified with a planted `push_error` → test failed, exit 100). Remaining gap: AC-6 handler *order* is not asserted (gdUnit4 has no in-order verify in this version) — only holds by construction of the test's call order.
+**Engine note**: on-device propagation of `NOTIFICATION_APPLICATION_*` to a non-root child `Node` remains unverified (ADR-0001 Risks) — Story 005's job, not this one.

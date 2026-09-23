@@ -370,3 +370,25 @@ carries over. Do not fork the tests.
 - Story: production/epics/time-service/story-003-time-provider-and-game-root.md — TimeProvider Autoload and GameRoot composition root
 - Tech debt logged: None (2 advisory notes recorded in story Completion Notes)
 - Next recommended: production/epics/time-service/story-004-app-lifecycle-adapter.md (or pet-definition-data story 001 in parallel)
+
+## Session Extract — /dev-story 2026-09-23 (story 004)
+- Story: production/epics/time-service/story-004-app-lifecycle-adapter.md — AppLifecycle adapter and resume/background handler slots
+- Files changed: src/core/app/app_lifecycle.gd (new, + .uid), src/core/app/GameRoot.tscn (AppLifecycle child), src/core/app/game_root.gd (signal wiring + _on_app_backgrounded / _on_app_resumed no-op slots)
+- Test written: tests/integration/time_service/app_lifecycle_test.gd (8 tests, AC-1..AC-6); suite 33/33 pass
+- Engine notes: new class_name needs a project scan (`godot --headless --editor --quit-after 1`) before a headless --script run sees it — check CI does an import step; spy(GameRoot.tscn) logs a harmless "time_service is read-only" push_error (gdUnit4 copy_properties vs Story 003 guard)
+- godot-specialist not spawned separately — engine review deferred to /code-review
+- Blockers: None
+- Next: /code-review src/core/app/app_lifecycle.gd src/core/app/game_root.gd tests/integration/time_service/app_lifecycle_test.gd then /story-done on story 004
+
+## Session Extract — /code-review 2026-09-23 (story 004)
+- Verdict: APPROVED WITH SUGGESTIONS (godot-specialist CLEAN, godot-gdscript-specialist 2 WARN, qa-tester 3 coverage gaps; no blocking)
+- Applied: @onready _app_lifecycle in game_root.gd; typed Dictionary[String,int] in test helper; new test FOCUS_IN-before-RESUMED; assert_error().is_success() around AC-6 notification calls (probe-verified: planted push_error → FAILED, exit 100)
+- Suite 34/34 pass
+- Not fixable here: AC-6 handler ORDER is not asserted (gdUnit4 has no in-order verify); resume-slot order untestable until Need System epic
+- Next: /story-done production/epics/time-service/story-004-app-lifecycle-adapter.md (update Test Evidence status line, story.md:103)
+
+## Session Extract — /story-done 2026-09-23 (story 004)
+- Verdict: COMPLETE WITH NOTES
+- Story: production/epics/time-service/story-004-app-lifecycle-adapter.md — AppLifecycle adapter and resume/background handler slots
+- Tech debt logged: None (AC-5 untestable-by-design and AC-6 handler-order gap recorded in story Completion Notes only)
+- Next recommended: production/epics/time-service/story-005-on-device-verification.md (needs real Android/iOS device + export presets) or production/epics/pet-definition-data/story-001-enums-and-definition-base.md (parallel, no device needed)

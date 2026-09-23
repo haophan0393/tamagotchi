@@ -35,5 +35,36 @@ var time_service: TimeService:
 		push_error("GameRoot.time_service is read-only; ignoring assignment.")
 
 
+@onready var _app_lifecycle: AppLifecycle = $AppLifecycle
+
+
 func _ready() -> void:
 	_time_service = TimeProvider.service
+
+	_app_lifecycle.app_backgrounded.connect(_on_app_backgrounded)
+	_app_lifecycle.app_resumed.connect(_on_app_resumed)
+
+
+## Handles [signal AppLifecycle.app_backgrounded] (ADR-0001 §4). iOS allows
+## only ~5 s after [constant Node.NOTIFICATION_APPLICATION_PAUSED] before the
+## process may be suspended, so whatever fills this slot must stay
+## synchronous and small (Story 004 Control Manifest guardrail).
+func _on_app_backgrounded() -> void:
+	# ADR-0003 (planned, not yet designed): request a save here. Out of
+	# scope for Story 004 — left as a no-op slot.
+	pass
+
+
+## Handles [signal AppLifecycle.app_resumed]. This is the single definition
+## of resume order (ADR-0001 §4) — slot order is fixed and must not be
+## reordered: the offline cap re-anchors before needs check crossings, and
+## the scheduler re-arms last. Every slot is a no-op until its collaborator
+## exists; none of them are implemented by Story 004.
+func _on_app_resumed() -> void:
+	# 1. offline_sim.reanchor_with_cap(...) — Offline Time Simulation has no
+	#    GDD yet; no-op until then.
+	# 2. needs.on_resumed() — pure; fires any crossing that happened while
+	#    suspended. Idempotent, so a spurious resume (focus flicker) is
+	#    harmless by design (Need System GDD).
+	# 3. crossing_scheduler.rearm() — re-arms the one-shot Timer last.
+	pass
