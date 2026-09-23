@@ -51,6 +51,36 @@ jobs:
           fi
           echo "OK — no direct engine clock reads in src/."
 
+      # ADR-0001 Risks — "Someone reads TimeProvider from logic code".
+      #
+      # TimeProvider is a composition-root concern: only GameRoot may read
+      # TimeProvider.service (autoload_access_from_logic forbidden pattern).
+      # Logic classes must receive TimeService via their own _init() instead.
+      - name: Assert no TimeProvider access outside src/core/app and src/core/time
+        run: |
+          PATTERN='TimeProvider'
+
+          # Search game code only. src/core/app/ and src/core/time/ are the
+          # only sanctioned locations (ADR-0001 §2). tests/ construct their
+          # own fakes/doubles deliberately and are excluded, like clock-discipline.
+          VIOLATIONS=$(grep -rEn "$PATTERN" \
+            --include='*.gd' \
+            src/ 2>/dev/null \
+            | grep -v '^src/core/app/' \
+            | grep -v '^src/core/time/' \
+            || true)
+
+          if [ -n "$VIOLATIONS" ]; then
+            echo "::error::TimeProvider referenced outside src/core/app and src/core/time."
+            echo "ADR-0001 §2: only the composition root (GameRoot) may read"
+            echo "TimeProvider.service — the autoload_access_from_logic forbidden"
+            echo "pattern. Logic classes must receive TimeService via _init()."
+            echo "Offending lines:"
+            echo "$VIOLATIONS"
+            exit 1
+          fi
+          echo "OK — no TimeProvider access outside src/core/app and src/core/time."
+
   test:
     name: Run gdUnit4 Tests
     runs-on: ubuntu-latest

@@ -13,6 +13,7 @@ config_version=5
 config/name="Pocket Pal"
 config/description="A forgiving pocket pet. Colorful skeuomorphic device, three buttons, one boxy LCD."
 config/features=PackedStringArray("4.7", "Mobile")
+run/main_scene="uid://bkplynyfn5rs5"
 
 [display]
 
@@ -23,6 +24,10 @@ window/size/window_height_override=720
 window/stretch/mode="canvas_items"
 window/stretch/aspect="expand"
 window/handheld/orientation=1
+
+[autoload]
+
+TimeProvider="*res://src/core/time/time_provider.gd"
 
 [editor_plugins]
 

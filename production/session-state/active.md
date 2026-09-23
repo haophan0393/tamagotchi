@@ -355,3 +355,18 @@ carries over. Do not fork the tests.
 - Story: production/epics/time-service/story-002-time-service-implementation.md — TimeService production implementation
 - Tech debt logged: None (follow-ups recorded in story Completion Notes)
 - Next recommended: production/epics/time-service/story-003-time-provider-and-game-root.md (or pet-definition-data story 001 in parallel)
+
+## Session Extract — /dev-story 2026-09-23 (story 003)
+- Story: production/epics/time-service/story-003-time-provider-and-game-root.md — TimeProvider Autoload and GameRoot composition root
+- Files changed: src/core/time/time_provider.gd (new, + .uid), src/core/app/game_root.gd (new, + .uid), src/core/app/GameRoot.tscn (new), project.godot ([autoload] TimeProvider, run/main_scene), .github/workflows/tests.yml (TimeProvider lint step in clock-discipline job)
+- Test written: tests/integration/time_service/time_provider_test.gd (3 tests); suite 25/25 pass; headless boot clean; AC-4 probe lint: exit 1 with probe, exit 0 after delete (outputs in dev-story report — copy into story Completion Notes at /story-done)
+- Engine note: gdUnit4 headless runner DOES load project Autoloads (verified on 4.7.1) — story fallback not needed
+- Note: GameRoot.tscn uid regenerated to canonical uid://bkplynyfn5rs5 at code review (hand-typed one failed round-trip)
+- Blockers: None
+- Next: /code-review src/core/time/time_provider.gd src/core/app/game_root.gd tests/integration/time_service/time_provider_test.gd then /story-done on story 003
+
+## Session Extract — /story-done 2026-09-23 (story 003)
+- Verdict: COMPLETE WITH NOTES
+- Story: production/epics/time-service/story-003-time-provider-and-game-root.md — TimeProvider Autoload and GameRoot composition root
+- Tech debt logged: None (2 advisory notes recorded in story Completion Notes)
+- Next recommended: production/epics/time-service/story-004-app-lifecycle-adapter.md (or pet-definition-data story 001 in parallel)

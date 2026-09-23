@@ -1,12 +1,12 @@
 # Story 003: TimeProvider Autoload and GameRoot composition root
 
 > **Epic**: Time Service
-> **Status**: Ready
+> **Status**: Complete
 > **Layer**: Foundation
 > **Type**: Integration
 > **Estimate**: M (~3 h)
 > **Manifest Version**: N/A — no control manifest (compressed path); rules below come from `docs/registry/architecture.yaml` forbidden_patterns (2026-09-23)
-> **Last Updated**: [set by /dev-story when implementation begins]
+> **Last Updated**: 2026-09-23
 
 ## Context
 
@@ -31,10 +31,10 @@
 
 *From GDD `design/gdd/time-service.md` AC #10 and ADR-0001 §2 / Risks / Validation Criteria:*
 
-- [ ] AC #10 — on boot, the `TimeProvider` Autoload exposes exactly one `TimeService` instance wired to `SystemTimeSource`, reachable from any scene-tree node without constructing its own
-- [ ] `TimeProvider.service` is read-only (assigning to it is rejected)
-- [ ] `src/core/app/GameRoot.tscn` (root `GameRoot`, script `src/core/app/game_root.gd`) is set as the main scene and boots headless without errors
-- [ ] New CI step: fails the build if `TimeProvider` appears in any `.gd` under `src/` outside `src/core/app/` and `src/core/time/`; proven by planting a reference in `src/gameplay/` locally and seeing it fail (ADR-0001 Validation Criteria)
+- [x] AC #10 — on boot, the `TimeProvider` Autoload exposes exactly one `TimeService` instance wired to `SystemTimeSource`, reachable from any scene-tree node without constructing its own
+- [x] `TimeProvider.service` is read-only (assigning to it is rejected)
+- [x] `src/core/app/GameRoot.tscn` (root `GameRoot`, script `src/core/app/game_root.gd`) is set as the main scene and boots headless without errors
+- [x] New CI step: fails the build if `TimeProvider` appears in any `.gd` under `src/` outside `src/core/app/` and `src/core/time/`; proven by planting a reference in `src/gameplay/` locally and seeing it fail (ADR-0001 Validation Criteria)
 
 ---
 
@@ -89,7 +89,7 @@
 **Required evidence**:
 - Integration: `tests/integration/time_service/time_provider_test.gd` — must exist and pass
 
-**Status**: [ ] Not yet created
+**Status**: [x] Created — 3 tests, passing
 
 ---
 
@@ -97,3 +97,33 @@
 
 - Depends on: Story 002 must be DONE
 - Unlocks: Story 004; Pet Definition Data epic's catalog-load story
+
+---
+
+## Completion Notes
+**Completed**: 2026-09-23
+**Criteria**: 4/4 passing (none deferred)
+**Deviations**:
+- ADVISORY — AC-1 test reads `TimeService._source` via `.get("_source")` instead of a public accessor (keeps `TimeService` unchanged; a rename would fail the test quietly rather than at compile time).
+- ADVISORY — the `TimeProvider` CI lint is a plain name grep and also matches comments; it may fire on cross-reference docs elsewhere in `src/`. Strict on purpose per ADR-0001; add comment exclusion if it gets noisy.
+**Test Evidence**: Integration — `tests/integration/time_service/time_provider_test.gd` (3 tests); full suite 25/25 pass; `godot --headless --quit-after 60` boots clean
+**Code Review**: Complete — `/code-review` CHANGES REQUIRED → fixed → APPROVED (2026-09-23). Fixes: hand-typed `GameRoot.tscn` uid (failed `ResourceUID` round-trip) replaced with generated `uid://bkplynyfn5rs5` in scene and `run/main_scene`; setter params renamed `_value`; `GameRoot.time_service` setter now `push_error`s; AC-1 reads from nodes' own `_ready()`; AC-3 asserts no pushed errors (proven by a planted `push_error` making it fail).
+**Engine note**: gdUnit4 v6.2.1's headless runner loads project Autoloads (verified on 4.7.1) — the Engine Notes fallback was not needed.
+
+**AC-4 lint proof** (step logic extracted from `.github/workflows/tests.yml`, run locally):
+
+With `src/gameplay/_lint_probe.gd` containing `TimeProvider.service`:
+```
+::error::TimeProvider referenced outside src/core/app and src/core/time.
+ADR-0001 §2: only the composition root (GameRoot) may read
+TimeProvider.service — the autoload_access_from_logic forbidden
+pattern. Logic classes must receive TimeService via _init().
+Offending lines:
+src/gameplay/_lint_probe.gd:4:	var x = TimeProvider.service
+EXIT CODE: 1
+```
+After deleting the probe:
+```
+OK — no TimeProvider access outside src/core/app and src/core/time.
+EXIT CODE: 0
+```
