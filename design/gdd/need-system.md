@@ -1,6 +1,6 @@
 # Need System
 
-> **Status**: In Design
+> **Status**: Approved (revised) — 2026-09-22 after `/design-review` (NEEDS REVISION → revised; see `reviews/need-system-review-log.md`)
 > **Author**: Hao Phan + Claude (lean review mode)
 > **Last Updated**: 2026-09-22
 > **Implements Pillar**: 2 (Never Guilt, Always Welcome), 3 (Two Minutes of Joy)
@@ -17,7 +17,7 @@ The player should feel *needed but never harassed*. Needs are a soft tug, not an
 
 The inverse is the thing to protect against hardest. A need that decays too fast turns the ritual into a chore; a need that never decays makes the visit pointless. Pillar 2 sets the asymmetry: the pet may look sad, but a returning player's first feeling must be *relief that it's fine*, not guilt at what they let happen.
 
-*(Thin by design — reduced-depth pass per the compressed path. `creative-director` not consulted — Lean mode. Review manually before production.)*
+*(Thin by design — reduced-depth pass per the compressed path. `creative-director` consulted at the 2026-09-22 `/design-review`.)*
 
 ## Detailed Rules
 
@@ -31,35 +31,43 @@ The inverse is the thing to protect against hardest. A need that decays too fast
 
 4. **One decay rule, online and offline.** Because value is derived from elapsed time, a closed app, a suspended app and a running app are arithmetically identical. Offline Time Simulation does not implement a second decay path; resuming from a two-week gap and idling for two weeks produce the same number.
 
-5. **Every mutation re-anchors.** Applying care, changing a rate, or applying an Offline Sim cap all follow the same two-step: compute the value at `now`, then write it back as the new `anchor_value` with `anchor_utc = now`. Re-anchoring is the only legal way to change a need.
+5. **Every mutation re-anchors.** Applying care or applying an Offline Sim cap follow the same two-step: compute the value at `now`, then write it back as the new `anchor_value` with `anchor_utc = now`. Re-anchoring is the only legal way to change a need.
 
-6. **A rate change is a mutation.** This is the non-obvious consequence of rule 3: if a need's decay rate changes mid-flight, the old anchor is no longer valid, because it was computed under the old rate. The sleep need's lights transition (rule 9) is the only case in MVP, and it **must** re-anchor on both edges.
+6. **Decay rates are fixed for the life of an anchor.** Each need decays at its species' `decay_per_hour` and nothing changes that rate at runtime in MVP. This is what makes the anchor valid: the anchor was computed under that rate. Any future feature that changes a rate mid-flight must re-anchor *before* the change takes effect — a rate change is a mutation under Core Rule 5.
 
-7. **Care restores by re-anchoring upward.** `anchor_value = clamp(value(now) + restore_amount, floor, 100)`. Restoring a need already at 100 is legal, costs nothing, and is not an error — Pillar 2 forbids a "you didn't need to do that" response.
+7. **Care restores by re-anchoring upward — all four needs, including sleep.** `anchor_value = clamp(value(now) + restore_amount, floor, 100)`. The action→need map is fixed in code (feed→hunger, clean→cleanliness, play→fun, lights→sleep, per Pet Definition Data Core Rule 10). Restoring a need already at 100 is legal, costs nothing, and is not an error — Pillar 2 forbids a "you didn't need to do that" response.
 
 8. **Decay stops at the floor and nothing happens there.** A need clamps at `floor` (default 0) and stays. There is no death, no cascade to other needs, no escalating penalty, and no state below the floor. This is the hard Pillar 2 guarantee and the reason the system has no fail state to test for.
 
-9. **Sleep is rate-switched by the dark state, not restored by a press.** Device Frame owns the `dark` flag (its Core Rule 4: a state change to the device, not an action on the pet). While `dark` is true, sleep moves *toward* 100 at `recover_per_hour`; while false, it decays at `decay_per_hour` like every other need. Device Frame must notify Need System on every toggle so rule 6 can re-anchor. *(Deviation from Pet Definition Data — see Open Questions.)*
+9. **Sleep is press-restored like every other need.** The lights action restores sleep by `CareProfile.restore_amount` through `apply_care`, exactly as feed restores hunger. "Lights out" is a momentary reaction beat presented by Pet Animation & Reactions, not a persistent device state: Need System holds no `dark` flag and has no rate that depends on one. How the lights action is *surfaced* (Device Frame's contextual **B** slot, Core Rule 4 of that GDD) is Device Frame's concern; it reaches Need System only as `apply_care(lights)` via Care Actions. *(Revised 2026-09-22: replaces the earlier rate-switched-by-`dark` model, which had no way back to lights-on, no reaction beat, and depended on a `recover_per_hour` field Pet Definition Data does not define.)*
 
-10. **`sad` is derived, never stored.** `is_sad(need) = value(now) <= sad_threshold`. No flag is persisted, so a need can never be saved in a state that disagrees with its own value.
+10. **State is derived, never stored, with a fixed precedence.** A need's state is computed from `value(now)` in this order, first match wins:
+    1. `value > sad_threshold` → `CONTENT`
+    2. `value == floor` → `AT_FLOOR`
+    3. otherwise → `SAD`
 
-11. **Urgency ranking is a UX convenience with no mechanical weight.** Need System exposes the sad needs ordered ascending by current value, ties broken by the fixed enum order (`hunger`, `cleanliness`, `fun`, `sleep`). Deterministic by construction. `game-concept.md` states the order a player tends needs never matters mechanically — this ranking only places Device Frame's menu cursor.
+    No state is persisted, so a need can never be saved in a state that disagrees with its own value. The precedence is what keeps the states disjoint for *any* data: when `floor > sad_threshold`, a need at its floor is `CONTENT`, not simultaneously `CONTENT` and `AT_FLOOR`. `is_sad(need)` is true for both `SAD` and `AT_FLOOR`.
 
-12. **Need System never reads the wall clock.** All time comes from an injected `TimeService` (Time Service Core Rules 1–2). This is what makes every rule above unit-testable against a fake clock, and it is enforced by the existing `clock-discipline` CI job.
+11. **Urgency ranking is a UX convenience with no mechanical weight.** Need System exposes the sad needs (`SAD` and `AT_FLOOR`) ordered ascending by current value, ties broken by the fixed enum order (`hunger`, `cleanliness`, `fun`, `sleep`). Deterministic by construction. `game-concept.md` states the order a player tends needs never matters mechanically — this ranking only informs Device Frame's cursor placement.
 
-13. **Need System owns the live anchors; Save & Persistence serialises them.** The in-memory anchor set is this system's state and only this system mutates it. *(Pet Definition Data currently describes current need levels as "runtime state owned by Save & Persistence" — see Open Questions.)*
+12. **Need System never reads the wall clock.** All time comes from an injected `TimeService` (Time Service Core Rules 1–2). This is what makes every rule above unit-testable against a fake clock, and it is enforced by the existing `clock-discipline` CI job. This applies to crossing detection too (Core Rule 14): no engine `Timer` lives inside the logic layer.
 
-14. **Threshold crossings are scheduled, not polled.** Because `seconds_until_sad()` solves for the exact crossing moment, Need System arms one one-shot timer per need on every re-anchor rather than sampling each frame: `0` fires `need_became_sad` immediately, a positive value arms the timer, `-1` arms nothing. On app resume the timer cannot be trusted — it may not have fired while suspended — so Need System recomputes every need, emits any crossing that was missed, and re-arms. This is not a tick: the timer *observes* the formula, it never advances it.
+13. **Need System owns the live anchors; Save & Persistence serialises them.** The in-memory anchor set is this system's state and only this system mutates it. Save reads a copy of the anchor set and hands one back on load; it never holds a live reference. *(Pet Definition Data currently describes current need levels as "runtime state owned by Save & Persistence" — see Open Questions.)*
+
+14. **Threshold crossings are detected by a pure check, and only *scheduled* by an adapter.** Detection and scheduling are split so the logic stays testable:
+    - **Logic (Need System, pure, unit-tested):** Need System keeps an in-memory, non-persisted `last_observed_state` per need, initialised on construction to the state of `anchor_value` itself and reset on every re-anchor. `check_crossings()` reads `now` from `TimeService`, recomputes every need, emits `need_became_sad(need_id)` for each need whose state moved from `CONTENT` into `SAD`/`AT_FLOOR` since it was last observed, and updates `last_observed_state`. It is idempotent: a second call at the same `now` emits nothing. `next_crossing_utc(need) -> int` returns the absolute UTC moment of the next downward crossing (`now + seconds_until_sad`), `now` if already sad, or `-1` for never.
+    - **Resume (Need System, pure):** `on_resumed()` is the single entry point for returning from background. It calls `check_crossings()`, so any crossing that happened while suspended fires exactly once. If Offline Time Simulation applies a cap on the same resume, its `reanchor_with_cap()` runs **before** `on_resumed()`.
+    - **Adapter (production only, no logic):** a thin `NeedCrossingScheduler` node arms one one-shot engine `Timer` for the soonest `next_crossing_utc()` across the four needs, calls `check_crossings()` when it fires, and re-arms after every check, re-anchor and resume. It holds no rule of its own and is the only part of this system that touches the engine's timer — it is excluded from the unit-tested surface and covered by an ADVISORY integration check (see Acceptance Criteria). A late or dropped timer is harmless: the next `check_crossings()` call catches up, because detection is state-based, not event-based.
 
 ### States and Transitions
 
-Each need is independently in one of three states, derived from its computed value — none is stored:
+Each need is independently in one of three states, derived from its computed value by the Core Rule 10 precedence — none is stored:
 
-| State | Condition | Notes |
+| State | Condition (evaluated in order) | Notes |
 |---|---|---|
 | `CONTENT` | `value > sad_threshold` | No icon shown; contributes nothing to the urgency ranking |
-| `SAD` | `floor < value ≤ sad_threshold` | Icon shown; enters the urgency ranking |
-| `AT_FLOOR` | `value == floor` | A sub-state of `SAD`, not a worse one. Shows the same icon and ranks first by value. Exists so the Pillar 2 guarantee is explicitly testable |
+| `AT_FLOOR` | not `CONTENT`, and `value == floor` | A sub-state of sad, not a worse one. Shows the same icon as `SAD` and ranks first by value. Exists so the Pillar 2 guarantee is explicitly testable. Unreachable when `floor > sad_threshold` |
+| `SAD` | neither of the above (`floor < value ≤ sad_threshold`) | Icon shown; enters the urgency ranking |
 
 | Transition | Trigger |
 |---|---|
@@ -67,22 +75,22 @@ Each need is independently in one of three states, derived from its computed val
 | `SAD → AT_FLOOR` | Elapsed time carries the computed value to `floor` |
 | `SAD`/`AT_FLOOR` → `CONTENT` | Care re-anchors the value above `sad_threshold` |
 | `SAD → SAD` | Care restores, but not above the threshold — legal, produces a reaction, clears no icon |
-| *(sleep only)* rate flip | `dark` toggles; need re-anchors and reverses direction. The state itself does not change on the flip — only the rate does |
 
-**There is no global system state.** Needs do not interact, gate, or cascade into one another; four needs at floor is not a distinct condition, it is just four needs at floor. The one aggregate fact this system publishes is `all_needs_addressed` — the concept's explicit "done for today" signal. Sleep counts as addressed while `dark` is true (see Formulas).
+**There is no global system state.** Needs do not interact, gate, or cascade into one another; four needs at floor is not a distinct condition, it is just four needs at floor. The one aggregate fact this system publishes is `all_needs_addressed` — the concept's explicit "done for today" signal — and it is true exactly when every need is `CONTENT`, so the signal can never coexist with a lit need icon.
 
 ### Interactions with Other Systems
 
 | System | Data In | Data Out | Owns the interface |
 |---|---|---|---|
 | Time Service | — | `get_now_utc()`, `get_elapsed_seconds()` | Time Service |
-| Pet Definition Data | `NeedProfile` (decay_per_hour, sad_threshold, floor), `CareProfile` | — | Pet Definition Data |
-| Care Actions | `apply_care(action_id)` | `need_changed`, `need_cleared` | **Need System** |
-| Device Frame & Button Input | `set_dark(bool, at_utc)` | `get_urgency_ranking() -> Array` | **Need System** |
-| Save & Persistence | anchor set on load | anchor set on save | Save & Persistence |
-| Offline Time Simulation | `reanchor_with_cap(max_offline_s)` on resume | — | Offline Time Simulation |
+| Pet Definition Data | `NeedProfile` (decay_per_hour, sad_threshold, floor), `CareProfile.restore_amount` | — | Pet Definition Data |
+| Care Actions | `apply_care(action_id)` — all four actions, including `lights` | `need_changed`, `need_cleared` | **Need System** |
+| Device Frame & Button Input | — | `get_urgency_ranking() -> Array[Need]` | **Need System** |
+| Save & Persistence | anchor set on load | anchor set on save (a copy) | Save & Persistence |
+| Offline Time Simulation | `reanchor_with_cap(max_offline_s)` on resume, before `on_resumed()` | — | Offline Time Simulation |
+| App lifecycle (resume handler) | `on_resumed()` | — | **Need System** (caller wiring → time/event ADR) |
 | Pet Animation & Reactions | — | `need_became_sad`, `need_cleared`, `all_needs_addressed` | **Need System** |
-| Daily Notification | — | `seconds_until_sad(need) -> int` | **Need System** |
+| Daily Notification | — | `seconds_until_sad(need) -> int`, `next_crossing_utc(need) -> int` | **Need System** |
 
 **Signals published:** `need_changed(need_id, value)`, `need_became_sad(need_id)`, `need_cleared(need_id)`, `all_needs_addressed()`.
 
@@ -90,27 +98,27 @@ Each need is independently in one of three states, derived from its computed val
 
 **Offline Time Simulation's cap is applied by re-anchoring, not by Need System knowing about it.** `MAX_OFFLINE` stays Offline Sim's tuning knob (as Time Service's GDD already specifies); Offline Sim calls a re-anchor with the capped elapsed on resume. Note that with floor-clamping, a long absence lands at `floor` with or without the cap — the cap's real job is letting a returning player land *above* floor, which is a Pillar 2 lever, not a correctness one.
 
-*Specialist agents not consulted for this section — Lean mode (specialists are spawned for Formulas and Acceptance Criteria). Review manually before production.*
+*Specialist agents not consulted for this section — Lean mode (specialists are spawned for Formulas and Acceptance Criteria). Reviewed by game-designer, systems-designer, qa-lead and godot-gdscript-specialist at the 2026-09-22 `/design-review`.*
 
 ## Formulas
 
 The `need_value` formula is defined as:
 
-`need_value = clamp(anchor_value + rate × (elapsed_seconds / 3600.0), floor, 100)`
+`need_value = clamp(anchor_value − decay_per_hour × (elapsed_seconds / 3600.0), floor, 100)`
 
-where `rate = +recover_per_hour` when the need is `sleep` and `dark` is true, and `rate = −decay_per_hour` in every other case. A single signed-rate formula covers both directions; there is no separate recovery formula.
+Every need, sleep included, uses this one formula. There is no recovery branch: needs only ever rise through `apply_care`.
 
 **Variables:**
 | Variable | Symbol | Type | Range | Description |
 |----------|--------|------|-------|-------------|
 | anchor_value | a | float | [floor, 100] | Value written at the last re-anchor |
-| rate | r | float | ≠ 0 | Signed points per hour; negative decays, positive recovers |
+| decay_per_hour | d | float | > 0 (PDD); proposed ≥ 0.01 (see Open Questions) | Points lost per real hour, from `NeedProfile` |
 | elapsed_seconds | e | int | ≥ 0 | `TimeService.get_elapsed_seconds(anchor_utc)` — never negative by construction |
-| floor | F | int | 0 ≤ F < sad_threshold | Non-fatal minimum, from `NeedProfile` |
+| floor | F | int | 0 ≤ F < sad_threshold (proposed PDD rule) | Non-fatal minimum, from `NeedProfile` |
 
-**Output Range:** `[floor, 100]`, always — the clamp is total, so no corrupted anchor or absurd elapsed can produce an out-of-range value. **Behaviour at extremes:** `elapsed = 0` returns `anchor_value` exactly, so repeated reads never drift. A five-year gap (≈1.58 × 10⁸ s) stays well inside float64 precision and simply clamps to `floor`.
+**Output Range:** `[floor, 100]`, always — the clamp is total, so no corrupted anchor or absurd elapsed can produce an out-of-range value. **Behaviour at extremes:** `elapsed = 0` returns `anchor_value` exactly (clamped), so repeated reads never drift. A five-year gap (≈1.58 × 10⁸ s) stays well inside float64 precision and simply clamps to `floor`.
 **Example:** `anchor_value = 100`, `decay_per_hour = 3.0`, `elapsed = 72000` (20 h) → `100 − 3.0 × 20 = 40`.
-**Example (dark):** `anchor_value = 28`, `recover_per_hour = 5.0`, `elapsed = 18000` (5 h) → `clamp(28 + 25, 0, 100) = 53`.
+**Example (sleep):** `anchor_value = 100`, `decay_per_hour = 1.5`, `elapsed = 86400` (24 h) → `100 − 1.5 × 24 = 64`.
 
 ---
 
@@ -121,9 +129,9 @@ The `apply_care` formula is defined as:
 **Variables:**
 | Variable | Symbol | Type | Range | Description |
 |----------|--------|------|-------|-------------|
-| restore_amount | R | int | 1–100 | Points restored, from `CareProfile` |
+| restore_amount | R | int | 1–100 | Points restored, from `CareProfile` for the action that targets this need |
 
-**Output Range:** `[floor, 100]`. **Behaviour at extremes:** at `R = 100` the result is 100 from any starting value — one press always fully clears. Applying care to a need already at 100 is a legal no-op, never an error (Core Rule 7).
+**Output Range:** `[floor, 100]`. **Behaviour at extremes:** at `R = 100` the result is 100 from any starting value — one press always fully clears. Applying care to a need already at 100 is a legal no-op on the value, never an error (Core Rule 7).
 **Example:** `need_value(now) = 28`, `restore_amount = 100` → `clamp(128, 0, 100) = 100`.
 
 ---
@@ -131,11 +139,10 @@ The `apply_care` formula is defined as:
 The `seconds_until_sad` formula is defined as:
 
 ```
-v0 = need_value(now);  r = active signed rate;  S = sad_threshold;  F = floor
-if v0 ≤ S:   return 0      // already sad
-if r ≥ 0:    return -1     // recovering or flat — will never cross downward
-if F > S:    return -1     // floor sits above the threshold — unreachable
-return ceili((v0 − S) / (−r) × 3600.0)
+v0 = need_value(now);  d = decay_per_hour;  S = sad_threshold;  F = floor
+if v0 ≤ S:   return 0      // already sad (SAD or AT_FLOOR)
+if F > S:    return -1     // floor sits above the threshold — can never go sad
+return ceili((v0 − S) / d × 3600.0)
 ```
 
 **Variables:**
@@ -143,18 +150,20 @@ return ceili((v0 − S) / (−r) × 3600.0)
 |----------|--------|------|-------|-------------|
 | v0 | v₀ | float | [floor, 100] | Current value at call time |
 | S | S | int | 0–100 | `sad_threshold` from `NeedProfile` |
-| r | r | float | ≠ 0 | Active signed rate (see `need_value`) |
+| d | d | float | > 0 | `decay_per_hour` from `NeedProfile` |
 
-**Output Range:** `0`, `-1`, or a positive int. **The sentinel contract is fixed here and is part of the interface: `0` means already sad, `-1` means never.** No null, no error, no exception. **Behaviour at extremes:** the three guards are evaluated *before* the division, so `−r` is only reached once `r < 0` is established — there is no division-by-zero path.
+**Output Range:** `0`, `-1`, or a positive int. **The sentinel contract is fixed here and is part of the interface: `0` means already sad, `-1` means never.** No null, no error, no exception. **Behaviour at extremes:** `d > 0` is guaranteed by Pet Definition Data's schema, so the division is always defined; the earlier `rate ≥ 0` guard is gone because, with no recovery branch, it could never fire. `F == S` is *not* a never case: the need reaches `S` exactly as it reaches the floor, and the formula returns that moment. The largest possible result is `100 / d × 3600`; with the proposed minimum `d ≥ 0.01` that is `3.6 × 10⁷` s (~417 days), comfortably inside a 64-bit `int`. Without that minimum a legal-but-absurd `d` (e.g. `1e-300`) would overflow `ceili()` — which is why the minimum is owed to Pet Definition Data (see Open Questions).
 **Example:** `v0 = 100`, `S = 40`, `decay_per_hour = 3.0` → `(100 − 40) / 3.0 = 20 h` → `72000`.
+
+`next_crossing_utc(need)` is derived directly: `-1` if `seconds_until_sad` is `-1`, otherwise `now + seconds_until_sad`.
 
 ---
 
 The `all_needs_addressed` condition is defined as:
 
-`all_needs_addressed = every need is CONTENT, OR (need is sleep AND dark is true)`
+`all_needs_addressed = every need is CONTENT`
 
-**Output Range:** boolean. This is the concept's "done for today" signal. Sleep counts as addressed while the pet is in the dark because putting the pet to bed *is* the resolution for that need — it then recovers unattended and is `CONTENT` by morning. **Behaviour at extremes:** a player who clears three needs and leaves the lights on does **not** get the signal; the same player who also darkens the device does. This is the one place where a device state participates in a need condition.
+**Output Range:** boolean. This is the concept's "done for today" signal, and because it is defined on the same state the icons are drawn from, it is true exactly when the last icon has cleared. **Behaviour at extremes:** a species with `sad_threshold == 100` for any need can never make that need `CONTENT` (it would require `value > 100`, which the clamp forbids), so the signal would be permanently unreachable. That data is excluded by the proposed Pet Definition Data rule `floor < sad_threshold < 100` (see Open Questions), which must land before Need System ships.
 
 ---
 
@@ -162,14 +171,14 @@ The `all_needs_addressed` condition is defined as:
 
 ### MVP balance values (species `bloop`)
 
-| Need | `decay_per_hour` | `recover_per_hour` | `sad_threshold` | `floor` | `restore_amount` |
-|---|---|---|---|---|---|
-| hunger | 3.0 | — | 40 | 0 | 100 |
-| cleanliness | 3.0 | — | 40 | 0 | 100 |
-| fun | 3.0 | — | 40 | 0 | 100 |
-| sleep | 1.5 | 5.0 *(while dark)* | 40 | 0 | — *(rate-switched, not press-restored)* |
+| Need | `decay_per_hour` | `sad_threshold` | `floor` | `restore_amount` (action) |
+|---|---|---|---|---|
+| hunger | 3.0 | 40 | 0 | 100 (feed) |
+| cleanliness | 3.0 | 40 | 0 | 100 (clean) |
+| fun | 3.0 | 40 | 0 | 100 (play) |
+| sleep | 1.5 | 40 | 0 | 100 (lights) |
 
-Derivation against the concept's "one check-in per day keeps the pet content" target: hunger crosses `sad_threshold` at `(100 − 40) / 3.0 = 20 h` — sad roughly 4 h before a 24 h check-in, a reliable margin against a player who checks in slightly early. At exactly 24 h it sits at `100 − 3.0 × 24 = 28`: visibly sad, yet 28 points clear of the floor, which is the Pillar 2 shape — a reason to return, not a reproach. Total neglect reaches the floor only at `100 / 3.0 ≈ 33 h`. Sleep is deliberately slower (sad at ~40 h, floor at ~67 h) so the routine daily player rarely meets a sad sleep need at all; recovery from 28 to 100 at 5.0/hr takes 14.4 h, about one night.
+Derivation against the concept's "one check-in per day keeps the pet content" target: hunger crosses `sad_threshold` at `(100 − 40) / 3.0 = 20 h` — sad roughly 4 h before a 24 h check-in, a reliable margin against a player who checks in slightly early. At exactly 24 h it sits at `100 − 3.0 × 24 = 28`: visibly sad, yet 28 points clear of the floor, which is the Pillar 2 shape — a reason to return, not a reproach. Total neglect reaches the floor only at `100 / 3.0 ≈ 33 h`. Sleep is deliberately the *occasional* need (sad at `60 / 1.5 = 40 h`, floor at ~67 h): a routine daily player tends it every other day or so, which keeps the lights action a pleasant variation rather than a daily chore. This intentionally places sleep outside the daily-rhythm safe band in Tuning Knobs — see the exemption there.
 
 ### Implementation notes (GDScript)
 
@@ -177,10 +186,13 @@ These are correctness requirements, not style preferences — each is a case whe
 
 - **`elapsed_seconds / 3600.0`, never `/ 3600`.** Both operands are `int`; integer division truncates toward zero, so 1800 s would yield 0 and drop 30 minutes of decay without any error.
 - **`ceili()` for `seconds_until_sad`, not a truncating `int()`** — so a scheduled notification fires at or after the crossing, never seconds early.
-- **`clamp(value, floor, 100)` takes (value, min, max) in that order.** A `floor > 100` is currently legal per the `NeedProfile` schema and would make this call incoherent rather than raise — see Open Questions.
+- **`clamp(value, float(floor), 100.0)` — cast the `int` bounds explicitly.** `NeedProfile` fields are `int`; mixed-type `clamp()` works through implicit widening, but the project treats unsafe-cast warnings as errors under static typing, so the casts are written out. Argument order is (value, min, max).
+- **State comparisons use `>` / `<=` against `float(sad_threshold)`, never `==`.** `sad_threshold` is not a clamp bound, so a computed value lands on it exactly only for binary-exact inputs; the precedence in Core Rule 10 is written as inequalities so correctness never depends on hitting it exactly.
 - **`value == floor` is a safe float equality here** *only* because `clamp()` returns the exact bound. Do not generalise that to other float comparisons in this system.
+- **Every typed-return function returns on every path.** Godot 4.7 errors on a typed-return method that can fall off the end. Write `seconds_until_sad` as early `return`s followed by an unconditional final `return`, so adding a guard later cannot silently open a path with no return.
+- **Collections are typed.** `get_urgency_ranking() -> Array[Need]`, never a bare `Array`.
 
-*`systems-designer` consulted (Lean mode) — formulas, balance values and boundary analysis reviewed.*
+*`systems-designer` consulted (Lean mode) — formulas, balance values and boundary analysis reviewed. Re-examined at the 2026-09-22 `/design-review`.*
 
 ## Edge Cases
 
@@ -193,35 +205,35 @@ These are correctness requirements, not style preferences — each is a case whe
 **Corrupt or hostile data**
 
 - **If `anchor_value` is out of range** (150, or −20, from a corrupted or tampered save): `clamp()` heals the *computed* value on every read, so gameplay never sees a bad number. But the *persisted* anchor stays corrupt until the next mutation, because a read is not a mutation (Core Rule 5). **Save & Persistence must validate anchors on load** — this is the one case Need System cannot fix for itself.
-- **If `floor == sad_threshold`**: the `SAD` band collapses to nothing and the need transitions `CONTENT → AT_FLOOR` directly. Legal, but it means the need is never "a bit sad" — it is fine, then bottomed.
-- **If `floor > sad_threshold`**: the need can never become sad. `seconds_until_sad` returns `-1` and the icon never shows. Currently legal data — flagged for a Pet Definition Data load-time validation rule (see Open Questions).
-- **If `floor == 100`**: `clamp(x, 100, 100)` freezes the need at 100 forever; decay has no observable effect. Silently breaks the need with no error. Same validation gap.
-- **If `sad_threshold == 100`**: the need reads sad at any value below full. A Pillar 2 violation achievable purely through legal data, which is exactly why the validation rule matters.
+- **If `floor == sad_threshold`**: the `SAD` band collapses to nothing and the need transitions `CONTENT → AT_FLOOR` directly. Legal, but it means the need is never "a bit sad" — it is fine, then bottomed. `seconds_until_sad` still returns the finite crossing moment.
+- **If `floor > sad_threshold`**: the need can never become sad. By the Core Rule 10 precedence it reads `CONTENT` at every value, including at the floor, so states stay disjoint; `seconds_until_sad` returns `-1` and the icon never shows. Excluded by the proposed Pet Definition Data rule; the precedence keeps behaviour defined until then.
+- **If `floor == 100`**: `clamp(x, 100, 100)` freezes the need at 100 forever; decay has no observable effect. Excluded by the same proposed rule (`floor < sad_threshold < 100`).
+- **If `sad_threshold == 100`**: the need reads sad at any value below full and can never be `CONTENT`, so `all_needs_addressed` is permanently unreachable — the "done for today" payoff silently disappears. This is the most harmful case in this list, and the reason the proposed rule's upper bound is strict (`< 100`, not `≤ 100`).
 - **If `sad_threshold == 0`**: only a need sitting exactly at floor is sad; the `SAD` state never fires on its own.
+- **If `decay_per_hour` is legal but vanishingly small** (e.g. `1e-300`): `need_value` is fine, but `seconds_until_sad` overflows `ceili()`. Excluded by the proposed minimum `decay_per_hour ≥ 0.01`.
 
 **Care**
 
 - **If care is applied to a need already at 100**: legal no-op on the value, but the reaction still plays and the press still feels answered. Pillar 2 forbids a "you didn't need to do that" response (Core Rule 7).
 - **If care restores a need but not above `sad_threshold`** (a small `restore_amount` against a deeply decayed need): the need stays `SAD`, the icon stays lit, and the reaction still plays. At MVP's `restore_amount = 100` this cannot occur, but the rule must hold for future tuning.
+- **If the lights action is applied when sleep is not sad**: identical to any other care on a content need — sleep re-anchors upward (usually to 100), the lights-out beat plays, and no icon changes. Whether Device Frame *offers* the action in that case is its own decision (see Open Questions); Need System accepts it either way.
 
-**The dark state**
+**Crossing detection**
 
-- **If `dark` is toggled while sleep is already at 100**: the need re-anchors as required, and recovery has no visible effect because the clamp holds at 100. Harmless, and re-anchoring anyway keeps Core Rule 6 unconditional — a conditional re-anchor is how drift bugs start.
-- **If `dark` is toggled rapidly**: every toggle re-anchors from the exact current value, so any number of flips in any pattern is lossless. There is no debounce and none is needed.
-- **If `dark` is left on indefinitely**: sleep reaches 100 and holds; the other three needs decay normally. A player who leaves the pet in the dark forever still returns to a hungry, dirty, bored pet — darkness is not a pause button.
-- **If `set_dark()` is called with a stale `at_utc`** (older than the current anchor): treat it as `now`. A rate change cannot be applied retroactively, because the elapsed time before it was genuinely spent at the old rate.
+- **If the production timer fires late, early, or not at all** (suspension, OS throttling): detection is state-based, so the next `check_crossings()` — from the next timer, the next re-anchor, or `on_resumed()` — emits any missed crossing exactly once. A timer that fires early finds no state change and emits nothing.
+- **If a need crosses and is cared for before any check runs** (app suspended through the crossing, player tends it immediately on resume before `on_resumed()` is called): the re-anchor resets `last_observed_state` to `CONTENT`, so no stale `need_became_sad` fires afterwards. The resume ordering in Core Rule 14 makes this case rare; it is harmless when it occurs.
 
 **Queries**
 
-- **If the urgency ranking is requested when no need is sad**: return an empty array. Device Frame must handle this — its GDD currently assumes a cursor position derived from "most urgent need" and does not define the all-content case. This is a live cross-GDD gap, not a hypothetical: it is the normal state of a pet immediately after a care session (see Open Questions).
-- **If `seconds_until_sad` is called on a recovering need** (sleep while dark): returns `-1` (never), since the value is moving away from the threshold, not toward it.
+- **If the urgency ranking is requested when no need is sad**: return an empty `Array[Need]`. Device Frame must handle this — its GDD currently assumes a cursor position derived from "most urgent need" and does not define the all-content case. This is the normal state of a pet immediately after a care session (see Open Questions).
+- **If sleep is the most urgent need**: it ranks first like any other need. Device Frame's ring holds only feed/clean/play (lights is a contextual **B** action), so "cursor on most urgent need" has no ring item to land on in that case. The ranking stays correct; cursor placement is Device Frame's to define (see Open Questions).
 
 **Persistence and aggregate state**
 
 - **If the app is killed mid-session**: an anchor is two plain fields with no intermediate state, so there is no partial write to recover from. Whatever was last saved is internally consistent by construction.
 - **If all four needs reach `floor` simultaneously**: nothing happens. There is no cascade, no compound penalty, no distinct "critical" condition — four needs at floor is just four needs at floor, and one care session still fully restores each. This is the Pillar 2 guarantee stated as an edge case so it is explicitly testable.
 
-*`systems-designer` boundary analysis (Lean mode, Formulas pass) fed this section directly.*
+*`systems-designer` boundary analysis (Lean mode, Formulas pass) fed this section directly; the precedence, `sad_threshold == 100` and tiny-decay cases were added at the 2026-09-22 `/design-review`.*
 
 ## Dependencies
 
@@ -230,33 +242,28 @@ These are correctness requirements, not style preferences — each is a case whe
 | Depends on | Type | Interface Used |
 |---|---|---|
 | Time Service | Hard | `get_now_utc()`, `get_elapsed_seconds(anchor_utc)` |
-| Pet Definition Data | Hard | `NeedProfile` (`decay_per_hour`, `recover_per_hour`, `sad_threshold`, `floor`), `CareProfile.restore_amount` |
+| Pet Definition Data | Hard | `NeedProfile` (`decay_per_hour`, `sad_threshold`, `floor`), `CareProfile.restore_amount` for all four actions |
 
-That is the complete upstream list. Need System is buildable as soon as those two exist, which matches its Core-layer position in the systems index.
+That is the complete upstream list. Need System is buildable as soon as those two exist, which matches its Core-layer position in the systems index. Every field it reads already exists in Pet Definition Data's approved schema; the only owed amendment is a validation tightening (see Open Questions), not a new field.
 
-**Notably *not* an upstream dependency: Device Frame.** The `dark` flag would otherwise create a cycle — Need System needs `dark` to pick sleep's rate, while Device Frame needs the urgency ranking to place its cursor. **Resolution: Device Frame owns `dark` and writes it one-way via `set_dark(bool, at_utc)`; Need System holds its own mirrored copy and never reads back.** This is deliberately the identical pattern the systems index already uses to break Device Frame ↔ Settings, and it must not be inverted for the same reason: the writer owns the value, the reader mirrors it.
+**No edge from Device Frame into Need System.** With sleep press-restored, the lights action reaches Need System the same way feed does — Device Frame emits `action_selected(lights)`, Care Actions calls `apply_care(lights)`. Device Frame writes nothing to Need System, so the earlier `dark`-flag mirroring pattern, and the cycle it existed to break, are gone.
 
 **Downstream (what depends on Need System):**
 
 | Depends on Need System | Type | Interface Used |
 |---|---|---|
-| Care Actions | Hard | `apply_care(action_id)`; listens to `need_changed`, `need_cleared` |
-| Offline Time Simulation | Hard | `reanchor_with_cap(max_offline_s)` |
+| Care Actions | Hard | `apply_care(action_id)` for feed, clean, play and lights; listens to `need_changed`, `need_cleared` |
+| Offline Time Simulation | Hard | `reanchor_with_cap(max_offline_s)`, called before `on_resumed()` on the same resume |
+| App lifecycle (resume handler) | Hard | `on_resumed()`. Who owns the handler is set by the time/event ADR |
 | Pet Animation & Reactions | Hard | `need_became_sad`, `need_cleared`, `all_needs_addressed` |
-| Daily Notification | Hard | `seconds_until_sad(need)` |
-| Save & Persistence | Hard (two-way) | Reads the anchor set to serialise; writes it back on load. Save owns the storage format; Need System owns the values and their validity |
-| LCD Screen Renderer | Hard | Current values and `SAD` flags, to draw the need icons and the "done for today" state |
+| Daily Notification | Hard | `seconds_until_sad(need)`, `next_crossing_utc(need)` |
+| Save & Persistence | Hard (two-way) | Reads a copy of the anchor set to serialise; hands one back on load. Save owns the storage format; Need System owns the values and their validity |
+| LCD Screen Renderer | Hard | Current values and derived states, to draw the need icons and the "done for today" state |
 | Device Frame & Button Input | **Soft** | `get_urgency_ranking()`. Soft by design: with an empty or unavailable ranking the menu cursor defaults to ring index 0 and the device remains fully usable |
 
 **Why the Device Frame edge must stay soft.** Device Frame sits in the Foundation layer and Need System in the Core layer; a hard Foundation→Core dependency would invert the build order and make the input framework unbuildable until needs exist. Keeping it soft preserves Device Frame's "buildable first" property while still letting it use the ranking when present.
 
-**Three corrections to `systems-index.md`** found while writing this section, none of which the index currently records:
-
-| Missing edge | Nature |
-|---|---|
-| Device Frame & Button Input → Need System | Soft. Device Frame's own GDD already assumes the urgency ranking exists; the index lists Device Frame as depending on nothing |
-| LCD Screen Renderer → Need System | Hard. The index folds "need icons" into LCD Renderer's scope but lists its dependencies as only Device Frame and Pet Definition Data |
-| Save & Persistence ↔ Need System | Hard, two-way. The index lists Save as depending on Time Service and Pet Definition Data only, though it must serialise this system's anchors |
+**Systems-index edges.** The three edges found while writing this GDD — Device Frame → Need System (soft), LCD Screen Renderer → Need System (hard), Save & Persistence ↔ Need System (hard, two-way) — were recorded in `systems-index.md` on 2026-09-22. The index's note that "Device Frame writes `dark` to Need System one-way" is now stale (see Open Questions).
 
 ## Tuning Knobs
 
@@ -264,18 +271,19 @@ That is the complete upstream list. Need System is buildable as soon as those tw
 
 | Knob (owned by PDD) | MVP default | Too low | Too high |
 |---|---|---|---|
-| `decay_per_hour` | 3.0 | Needs never go sad between daily check-ins — the visit has no purpose and the daily hypothesis fails | Pet is at `floor` before the player's next check-in; every return starts bottomed out, which reads as punishment (Pillar 2) |
-| `recover_per_hour` *(sleep)* | 5.0 | Sleep does not recover across one night, so darkening the device feels inert | Sleep refills almost instantly, making the lights toggle vestigial |
-| `sad_threshold` | 40 | Icon appears only when the need is nearly bottomed — no warning, and the urgency ranking has nothing to order | Need reads sad almost permanently; at 100 it is sad at any value below full |
-| `floor` | 0 | N/A — 0 is the safe default and the floor cannot be negative | Approaching 100 makes decay invisible; at or above `sad_threshold` it breaks the `SAD` state entirely |
-| `restore_amount` | 100 | Care cannot clear a need in one press, breaking the two-minute session promise | Capped at 100 by the clamp; 100 means one press always fully clears from any value |
+| `decay_per_hour` | 3.0 (sleep 1.5) | Needs never go sad between daily check-ins — the visit has no purpose and the daily hypothesis fails. Below 0.01, `seconds_until_sad` can overflow (proposed PDD minimum) | Pet is at `floor` before the player's next check-in; every return starts bottomed out, which reads as punishment (Pillar 2) |
+| `sad_threshold` | 40 | Icon appears only when the need is nearly bottomed — no warning, and the urgency ranking has nothing to order | Need reads sad almost permanently; at 100 it can never be content and "done for today" is unreachable |
+| `floor` | 0 | N/A — 0 is the safe default and the floor cannot be negative | Approaching 100 makes decay invisible; at or above `sad_threshold` the need can never go sad |
+| `restore_amount` | 100 (all four actions) | Care cannot clear a need in one press, breaking the two-minute session promise. Very small values (≈1) produce a reaction for a change the player cannot see | Capped at 100 by the clamp; 100 means one press always fully clears from any value |
 
-**The derived safe band for `decay_per_hour`.** Two concept-level requirements bracket it, given a 24-hour check-in rhythm:
+**The derived safe band for `decay_per_hour` (daily needs).** Two concept-level requirements bracket it, given a 24-hour check-in rhythm:
 
 - To be **sad by the next check-in**: `(100 − sad_threshold) / decay_per_hour < 24` → `decay_per_hour > (100 − sad_threshold) / 24`
 - To **not be at floor** by the next check-in: `100 / decay_per_hour > 24` → `decay_per_hour < 100 / 24 ≈ 4.17`
 
-At the MVP `sad_threshold` of 40 this gives a band of roughly **2.5 to 4.17**, and the chosen 3.0 sits comfortably inside it with margin at both ends. Any future re-tune should be checked against this band rather than by feel alone — a value outside it breaks either the reason to return or the no-guilt promise, and does so silently.
+At the MVP `sad_threshold` of 40 this gives a band of roughly **2.5 to 4.17**, and the chosen 3.0 sits comfortably inside it with margin at both ends. Any future re-tune of hunger, cleanliness or fun should be checked against this band rather than by feel alone — a value outside it breaks either the reason to return or the no-guilt promise, and does so silently.
+
+**Exemption: sleep.** The band's lower bound encodes "sad by every daily check-in". Sleep is designed *not* to meet it — at 1.5 it is the occasional need, sad roughly every other day. Only the upper bound (`< 4.17`, never at floor by the next check-in) applies to sleep, because that one is the Pillar 2 guarantee. A re-tune of sleep should keep it below the daily needs' rate and above the Pillar 2 ceiling.
 
 **Explicitly not knobs:**
 
@@ -294,26 +302,28 @@ Need System renders nothing and plays nothing. It owns no sprites, no icons, no 
 |---|---|---|
 | A need icon appears | `need_became_sad(need_id)` | LCD Screen Renderer |
 | A need icon clears | `need_cleared(need_id)` | LCD Screen Renderer |
-| Pet idle shifts content ↔ sad | any need entering/leaving `SAD` | Pet Animation & Reactions |
+| Pet idle shifts content ↔ sad | any need entering/leaving `SAD`/`AT_FLOOR` | Pet Animation & Reactions |
 | "Done for today" | `all_needs_addressed()` | LCD Screen Renderer + Pet Animation & Reactions (happy idle) |
-| Care reaction beat | `need_changed` following `apply_care` | Pet Animation & Reactions |
+| Care reaction beat — feed, clean, play | `need_changed` following `apply_care` | Pet Animation & Reactions |
+| Care reaction beat — lights ("lights out") | `need_changed` following `apply_care(lights)` | Pet Animation & Reactions: a short beat (screen dims, pet dozes, lights return), same length class as the other reactions |
 
-Two constraints this system places on whoever presents those moments:
+Three constraints this system places on whoever presents those moments:
 
 - **`AT_FLOOR` must not get its own escalated visual.** It shows the same icon as `SAD`. A distinct "critical" presentation would reintroduce the punishment Pillar 2 forbids, through the art rather than the rules.
 - **A care press on an already-full need still gets a reaction** (Core Rule 7). The visual layer must not suppress the beat just because the value did not change.
+- **"Lights out" is momentary.** The screen returns to normal when the beat ends; the device never stays dark. A persistent dark screen would read as a switched-off toy (Pillar 1) and has no way back through three buttons.
 
 ## UI Requirements
 
 Need System has no UI surface. It exposes no screen, no menu and no control, and the player never interacts with it directly — every interaction arrives through Device Frame's three buttons and is applied by Care Actions.
 
-Its only UI-adjacent obligation is the **urgency ranking contract** consumed by Device Frame: an ordered array of sad needs, ascending by value, tie-broken by enum index, **and empty when no need is sad**. Device Frame's GDD does not currently define its behaviour for the empty case, which is the normal state after a completed care session (see Open Questions).
+Its only UI-adjacent obligation is the **urgency ranking contract** consumed by Device Frame: an `Array[Need]` of sad needs, ascending by value, tie-broken by enum index, **and empty when no need is sad**. Device Frame's GDD does not currently define its behaviour for the empty case, nor for sleep ranking first (see Open Questions).
 
 Need icon layout, cursor rendering and the "done for today" presentation all belong to LCD Screen Renderer.
 
 ## Acceptance Criteria
 
-All criteria below are **BLOCKING** and independently automatable in gdUnit4. Need System is pure logic over an injected `TimeService`, so unlike a rendering or feel system there is no criterion here requiring human judgement — no ADVISORY tier is listed because none is warranted.
+All criteria below are **BLOCKING** and independently automatable in gdUnit4 against a `FakeTimeSource`, except one **ADVISORY** criterion for the production timer adapter (last block). The logic layer is pure; the adapter is the single place engine timing is involved, and it is kept out of the unit-tested surface by Core Rule 14.
 
 **Enum and scale**
 
@@ -322,88 +332,96 @@ All criteria below are **BLOCKING** and independently automatable in gdUnit4. Ne
 
 **`need_value`**
 
-- **GIVEN** `anchor_value=100`, `decay_per_hour=3.0`, `elapsed=0`, **WHEN** called, **THEN** it returns exactly `100.0` — no drift on a same-instant re-read. *(Edge Cases)*
+- **GIVEN** `anchor_value=100`, `decay_per_hour=3.0`, `elapsed=0`, **WHEN** called twice in a row, **THEN** both calls return exactly `100.0` — no drift on a same-instant re-read, because nothing accumulates. *(Core Rule 3, Edge Cases)*
 - **GIVEN** `anchor_value=100`, `decay_per_hour=3.0`, `elapsed=72000`, **WHEN** called, **THEN** it returns `40.0`. *(`need_value`)*
 - **GIVEN** `anchor_value=100`, `decay_per_hour=3.0`, `elapsed_seconds=1800`, **WHEN** called, **THEN** it returns `98.5`. **An implementation using `elapsed_seconds / 3600` truncates to zero decay and must fail this assertion.** *(Implementation notes)*
-- **GIVEN** `anchor_value=28`, `recover_per_hour=5.0`, `dark=true`, `elapsed=18000`, **WHEN** called, **THEN** it returns `53.0`. *(`need_value`, dark branch)*
-- **GIVEN** a ~5-year elapsed gap, **WHEN** called, **THEN** the result clamps exactly to `floor` with no precision loss or overflow. *(Edge Cases)*
-- **GIVEN** a corrupted `anchor_value` of `150` or `-20`, **WHEN** called, **THEN** the returned value is clamped within `[floor, 100]` on every read. *(Edge Cases)*
-- **GIVEN** an `anchor_utc` in the future (simulated rollback), **WHEN** called, **THEN** it returns `anchor_value` unchanged. *(Edge Cases)*
-- **GIVEN** `floor == sad_threshold`, **WHEN** a need decays through that value, **THEN** it transitions `CONTENT → AT_FLOOR` with no `SAD`-only state observed. *(Edge Cases)*
+- **GIVEN** sleep with `anchor_value=100`, `decay_per_hour=1.5`, `elapsed=86400`, **WHEN** called, **THEN** it returns `64.0` — sleep uses the same formula as every other need. *(Core Rule 9, `need_value`)*
+- **GIVEN** a ~5-year elapsed gap (`elapsed=157680000`), **WHEN** called, **THEN** the result is exactly `float(floor)`. *(Edge Cases)*
+- **GIVEN** `floor=0`, `elapsed=0`, and a corrupted `anchor_value` of `150`, **WHEN** called, **THEN** it returns exactly `100.0`; **AND GIVEN** a corrupted `anchor_value` of `-20`, **THEN** it returns exactly `0.0`. *(Edge Cases)*
+- **GIVEN** `anchor_value=70` and an `anchor_utc` 3600 s ahead of the fake clock (simulated rollback), **WHEN** called, **THEN** it returns exactly `70.0`. *(Edge Cases)*
+- **GIVEN** `floor == sad_threshold == 40`, `anchor_value=100`, `decay_per_hour=3.0`, **WHEN** sampled at `elapsed=71999` and `elapsed=72000`, **THEN** the states are `CONTENT` then `AT_FLOOR`, with no `SAD` observed. *(Edge Cases)*
 
 **`apply_care`**
 
-- **GIVEN** `need_value(now)=28`, `restore_amount=100`, **WHEN** care is applied, **THEN** `anchor_value=100` and `anchor_utc=now`. *(`apply_care`)*
+- **GIVEN** `need_value(now)=28`, `restore_amount=100`, **WHEN** care is applied, **THEN** `anchor_value=100` and `anchor_utc=now`. *(`apply_care`, Core Rule 5)*
 - **GIVEN** `need_value(now)=100`, **WHEN** care is applied, **THEN** the value stays `100` but `anchor_utc` still updates — re-anchoring is unconditional. *(Core Rules 5, 7)*
 - **GIVEN** a restore landing below `sad_threshold` (`restore_amount=10`, `value=5`, `threshold=40`), **WHEN** applied, **THEN** the value is `15`, the state stays `SAD`, no `need_cleared` fires, and `need_changed` does. *(States and Transitions)*
+- **GIVEN** sleep `SAD` at value `28` and `CareProfile.restore_amount(lights)=100`, **WHEN** `apply_care(lights)` is called, **THEN** sleep's value is `100.0`, its state is `CONTENT`, and `need_cleared(sleep)` fires. *(Core Rules 7, 9)*
+- **GIVEN** sleep anchored at `t=0` with `anchor_value=100`, `decay_per_hour=1.5`, `restore_amount(lights)=10`, **WHEN** `apply_care(lights)` is called at `t=36000` and again at `t=72000`, **THEN** the anchors are `95.0` then `90.0`, and `need_value` at `t=108000` is exactly `75.0` — a chain of re-anchors is lossless. *(Core Rules 5, 6)*
 
-**`seconds_until_sad`**
+**`seconds_until_sad` and `next_crossing_utc`**
 
 - **GIVEN** `v0 ≤ sad_threshold`, **WHEN** called, **THEN** it returns `0`. *(sentinel contract)*
-- **GIVEN** a recovering need (`dark=true`), **WHEN** called, **THEN** it returns `-1`. *(sentinel contract)*
-- **GIVEN** `floor > sad_threshold`, **WHEN** called, **THEN** it returns `-1` without ever dividing. *(sentinel contract)*
+- **GIVEN** `floor=50`, `sad_threshold=40`, **WHEN** called at any value, **THEN** it returns `-1`. *(sentinel contract)*
+- **GIVEN** `floor == sad_threshold == 40`, `v0=100`, `decay_per_hour=3.0`, **WHEN** called, **THEN** it returns `72000`, not `-1`. *(`seconds_until_sad`)*
 - **GIVEN** `v0=100`, `sad_threshold=40`, `decay_per_hour=7.0` (exact answer `30857.14…`), **WHEN** called, **THEN** it returns `30858`. **A truncating `int()` returning `30857` must fail this assertion.** *(Implementation notes)*
+- **GIVEN** a need anchored at `t=1000` with `anchor_value=100`, `decay_per_hour=3.0`, `sad_threshold=40`, and the fake clock at `t=1000`, **WHEN** `next_crossing_utc()` is called, **THEN** it returns `73000`; for a need with `floor > sad_threshold` it returns `-1`. *(Core Rule 14)*
 
 **`all_needs_addressed`**
 
-- **GIVEN** (a) all four `CONTENT` with `dark=false`, (b) three `CONTENT` with sleep `SAD` and `dark=true`, (c) three `CONTENT` with one non-sleep need `SAD`, **WHEN** evaluated, **THEN** the results are `true`, `true`, `false` respectively — (c) regardless of `dark`. *(`all_needs_addressed`)*
+- **GIVEN** (a) all four needs `CONTENT`, (b) three `CONTENT` with sleep `SAD`, (c) the state from (b) after `apply_care(lights)` with `restore_amount=100`, **WHEN** evaluated, **THEN** the results are `true`, `false`, `true` respectively, and `all_needs_addressed()` is emitted on the transition into (c). *(`all_needs_addressed`)*
+- **GIVEN** a `NeedProfile` with `sad_threshold=100` for any need, **WHEN** that need is at `100.0`, **THEN** its state is `SAD`, not `CONTENT` — documenting why the Pet Definition Data rule must exclude this data. *(Edge Cases)*
 
 **Urgency ranking**
 
-- **GIVEN** hunger=10 and fun=25 both `SAD`, cleanliness `CONTENT`, sleep `AT_FLOOR`(0), **WHEN** `get_urgency_ranking()` is called, **THEN** it returns `[sleep, hunger, fun]`. *(Core Rule 11)*
+- **GIVEN** hunger=10 and fun=25 both `SAD`, cleanliness `CONTENT`, sleep `AT_FLOOR`(0), **WHEN** `get_urgency_ranking()` is called, **THEN** it returns the `Array[Need]` `[sleep, hunger, fun]`. *(Core Rule 11)*
 - **GIVEN** two sad needs at an identical value, **WHEN** ranked, **THEN** they order by enum index (hunger < cleanliness < fun < sleep). *(Core Rule 11)*
-- **GIVEN** no need is `SAD`, **WHEN** called, **THEN** it returns an empty array, never null. *(Edge Cases)*
+- **GIVEN** no need is sad, **WHEN** called, **THEN** it returns an empty `Array[Need]`, never null. *(Edge Cases)*
 
-**State transitions**
+**State derivation**
 
-- **GIVEN** decay carrying a value to `sad_threshold`, **WHEN** queried at the crossing, **THEN** `value == sad_threshold` reads `SAD`, not `CONTENT`. *(States and Transitions)*
-- **GIVEN** decay carrying a value to exactly `floor`, **WHEN** queried, **THEN** the state reads `AT_FLOOR` and ranks first among ties. *(States and Transitions)*
+- **GIVEN** `anchor_value=100`, `decay_per_hour=3.0`, `sad_threshold=40`, **WHEN** sampled at `elapsed=71999`, `72000` and `72001`, **THEN** the states are `CONTENT`, `SAD`, `SAD`. The inputs are binary-exact, so `elapsed=72000` yields exactly `40.0`; the implementation must compare with `<=`, not `==`. *(Core Rule 10, Implementation notes)*
+- **GIVEN** decay carrying a value to exactly `floor` (with `floor < sad_threshold`), **WHEN** queried, **THEN** the state reads `AT_FLOOR` and ranks first among ties. *(States and Transitions)*
+- **GIVEN** `floor=50`, `sad_threshold=40`, and a need decayed to its floor, **WHEN** state is queried, **THEN** it reads `CONTENT` — not `AT_FLOOR`, and never both. *(Core Rule 10 precedence)*
 - **GIVEN** a `SAD`/`AT_FLOOR` need, **WHEN** care re-anchors it above `sad_threshold`, **THEN** the state reads `CONTENT` and `need_cleared` fires. *(States and Transitions)*
-- **GIVEN** sleep decaying, **WHEN** `set_dark(true, now)` is called, **THEN** sleep re-anchors at its current computed value and thereafter moves at `+recover_per_hour`; the derived state is unchanged at the instant of the flip. *(Core Rules 6, 9)*
+- **GIVEN** an instance constructed only from a persisted anchor pair with no mutation yet, **WHEN** state is queried at three different fake-clock times, **THEN** each result matches the state computed from `need_value` at that time — proving state is recomputed, never cached. *(Core Rule 10)*
 
-**Dark state**
+**Anchor ownership**
 
-- **GIVEN** sleep already at `100`, **WHEN** `dark` toggles on, **THEN** `anchor_utc` updates but the value stays `100`. *(Core Rule 6)*
-- **GIVEN** N rapid alternating `set_dark()` calls, **WHEN** the value is queried after the Nth, **THEN** it is identical to computing directly from the final anchor and rate — no drift with toggle count. *(Edge Cases)*
-- **GIVEN** `set_dark()` called with an `at_utc` older than the current `anchor_utc`, **WHEN** applied, **THEN** it is treated as `now`. *(Edge Cases)*
+- **GIVEN** a Need System with non-default anchors on all four needs, **WHEN** its anchor set is read and a fresh instance is constructed from that set with the same `TimeService`, **THEN** every need's value and state are identical between the two instances; **AND WHEN** the read-out set is modified afterwards, **THEN** the original instance's values do not change. *(Core Rule 13 — accessor names provisional, see Open Questions)*
 
-**Scheduled crossings**
+**Crossing detection (logic layer)**
 
-- **GIVEN** a need re-anchored with `seconds_until_sad() = 72000`, **WHEN** the fake clock advances to exactly that moment, **THEN** `need_became_sad` fires exactly once. *(Core Rule 14)*
-- **GIVEN** a need whose crossing moment passed while the app was suspended, **WHEN** the app resumes, **THEN** `need_became_sad` fires once on resume and the timer is re-armed. *(Core Rule 14)*
+- **GIVEN** hunger anchored at `t=0` with `anchor_value=100`, `decay_per_hour=3.0`, `sad_threshold=40`, **WHEN** `check_crossings()` is called with the fake clock at `71999`, then at `72000`, then again at `72000`, **THEN** `need_became_sad(hunger)` is emitted exactly once, on the second call. *(Core Rule 14)*
+- **GIVEN** hunger `CONTENT` at its anchor and the fake clock advanced from `t=0` to `t=100000` with no intervening `check_crossings()` (simulated suspension), **WHEN** `on_resumed()` is called, **THEN** `need_became_sad(hunger)` is emitted exactly once, and a second `on_resumed()` at the same time emits nothing. *(Core Rule 14)*
+- **GIVEN** a need that crossed while unobserved, **WHEN** care re-anchors it above `sad_threshold` before any `check_crossings()` runs, **THEN** a subsequent `check_crossings()` emits no `need_became_sad` for it. *(Edge Cases)*
 
 **No-cascade guarantee**
 
-- **GIVEN** all four needs simultaneously `AT_FLOOR`, **WHEN** care is applied to each, **THEN** each restores fully with no interaction, ordering dependency or blocked state. *(Core Rule 8)*
+- **GIVEN** all four needs simultaneously `AT_FLOOR`, **WHEN** care is applied to each in any order, **THEN** each restores fully with no interaction, ordering dependency or blocked state. *(Core Rule 8)*
 
-**Derived state**
+**Production timer adapter — ADVISORY**
 
-- **GIVEN** an instance constructed only from a persisted anchor pair with no mutation yet, **WHEN** state is queried, **THEN** it returns the value-correct state — proving state is recomputed, never cached. *(Core Rule 10)*
+- **GIVEN** a build on a real device with `NeedCrossingScheduler` active and a need 2 minutes from its crossing (test species with a fast `decay_per_hour`), **WHEN** the app is (a) left in the foreground past the crossing and (b) backgrounded across the crossing and resumed, **THEN** the need icon appears in both cases without further input. Evidence: integration test or on-device walkthrough in `production/qa/evidence/`. *(Core Rule 14 adapter — not unit-testable by design)*
 
-Every clock-dependent criterion uses a `FakeTimeSource`; none depends on real wall-clock time, sleeps, or inter-test ordering. Core Rules 4, 5 and 12 have no dedicated criterion by design: 4 and 5 are proven jointly by the criteria above, and 12 is already enforced project-wide by the existing `clock-discipline` CI job.
+Every BLOCKING clock-dependent criterion uses a `FakeTimeSource`; none depends on real wall-clock time, sleeps, engine timers, or inter-test ordering. Core Rules 4 and 12 have no dedicated criterion by design: 4 is proven jointly by the `need_value` and `on_resumed()` criteria (elapsed time is the only input, whether or not the app was running), and 12 is enforced project-wide by the existing `clock-discipline` CI job.
 
-*`qa-lead` consulted (Lean mode) — coverage and gate levels validated.*
+*`qa-lead` consulted (Lean mode) — coverage and gate levels validated. Revised at the 2026-09-22 `/design-review`.*
 
 ## Open Questions
 
-**Contract gaps with Pet Definition Data (Approved GDD — not edited from this session):**
+**Contract changes owed by Pet Definition Data (Approved GDD — not edited from this session):**
 
-- **Q**: `recover_per_hour` is required by Core Rule 9 but has no home in PDD's `NeedProfile` schema, which defines only `decay_per_hour`, `sad_threshold` and `floor`. **Owner**: systems-designer / Pet Definition Data. **Target**: PDD amendment before the Care Actions session.
-- **Q**: `CareProfile.restore_amount` for the `lights` action is now dead data — Core Rule 9 makes sleep rate-switched rather than press-restored, so the field has no consumer. Either remove it from the schema or document it as reserved. **Owner**: systems-designer / Pet Definition Data. **Target**: same amendment.
-- **Q**: PDD's load-time validation (its Core Rule 12) permits `floor > sad_threshold`, `floor > 100` and `sad_threshold == 100` — each of which silently breaks a need (see Edge Cases). Proposed new checks: `floor < sad_threshold ≤ 100` and `floor ≤ 100`. **Owner**: systems-designer. **Target**: PDD Core Rule 12 amendment, before the first catalog validator is implemented.
+- **Q**: PDD's load-time validation (its Core Rule 12) permits `floor ≥ sad_threshold`, `sad_threshold == 100` and vanishingly small `decay_per_hour`. Each silently breaks a need; `sad_threshold == 100` removes the "done for today" payoff entirely (see Edge Cases). Proposed checks: `floor < sad_threshold < 100` for every need, and `decay_per_hour ≥ 0.01`. The upper bound must be strict — the earlier `≤ 100` draft let the worst case through. **Owner**: systems-designer. **Target**: PDD Core Rule 12 amendment, before the first catalog validator is implemented and before Need System ships.
 - **Q**: PDD's Overview describes current need levels as "runtime state owned by Save & Persistence", while Core Rule 13 here says Need System owns the live anchors and Save serialises them. Wording correction only — no schema impact. **Owner**: Pet Definition Data. **Target**: next touch of that file.
+- **Q**: A very small `restore_amount` (≈1) produces a full reaction for a change the player cannot see. Consider a minimum-perceptible-restore guideline alongside the existing `restore_amount` range. **Owner**: systems-designer. **Target**: PDD tuning pass; not blocking at MVP's `restore_amount = 100`.
+- ~~**Q**: `recover_per_hour` is required by Core Rule 9 but has no home in PDD's `NeedProfile` schema.~~ **Resolved 2026-09-22** — sleep is press-restored (Core Rule 9); the field is no longer needed.
+- ~~**Q**: `CareProfile.restore_amount` for the `lights` action is dead data.~~ **Resolved 2026-09-22** — it is now the sleep restore amount.
 
 **Undefined downstream interfaces:**
 
-- **Q**: `reanchor_with_cap(max_offline_s)` is named in the Interactions table but has no formula, no Core Rule, and no specified behaviour when elapsed is already under the cap. **Owner**: Offline Time Simulation. **Target**: that GDD's session, once `MAX_OFFLINE` is defined there.
-- **Q**: The accessor shape Save & Persistence uses to read and write the anchor set is unspecified (getter/setter names, exposure form). Same class of gap as Time Service's open anchor-timestamp contract. **Owner**: Save & Persistence. **Target**: that GDD's session.
+- **Q**: `reanchor_with_cap(max_offline_s)` is named in the Interactions table but has no formula, no Core Rule, and no specified behaviour when elapsed is already under the cap. Its ordering relative to `on_resumed()` is fixed here (cap first). **Owner**: Offline Time Simulation. **Target**: that GDD's session, once `MAX_OFFLINE` is defined there.
+- **Q**: The accessor shape Save & Persistence uses to read and write the anchor set is unspecified (getter/setter names, exposure form); the Core Rule 13 criterion fixes only the copy semantics. Same class of gap as Time Service's open anchor-timestamp contract. **Owner**: Save & Persistence. **Target**: that GDD's session.
+- **Q**: Who calls `on_resumed()`, and from which engine notification? It depends on `NOTIFICATION_APPLICATION_RESUMED` behaviour, which is still unverified for 4.7 (Time Service Open Questions). Where `NeedCrossingScheduler` lives in the scene tree belongs to the same decision. **Owner**: technical-director. **Target**: the time/event injection ADR.
 
 **Cross-GDD corrections owed to other documents:**
 
-- **Q**: Device Frame assumes a cursor position derived from the "most urgent need" but does not define its behaviour when the urgency ranking is **empty** — which is the normal state immediately after a completed care session. **Owner**: Device Frame & Button Input. **Target**: its revision session (it already carries 11 blocking items from the 2026-09-22 review).
-- **Q**: `systems-index.md` is missing three dependency edges found while writing this GDD: Device Frame → Need System (soft), LCD Screen Renderer → Need System (hard), and Save & Persistence ↔ Need System (hard, two-way). **Owner**: — . **Target**: next touch of the index.
+- **Q**: Device Frame's lights contract must be restated for the press-restored model. Lights is a contextual **B** action that emits `action_selected(lights)` to Care Actions — not a device state, and there is no `dark` flag or `set_dark()`. "Sleepy" (the condition that surfaces the toggle) is undefined; the proposal is "sleep is `SAD` or `AT_FLOOR`". **Owner**: Device Frame & Button Input. **Target**: its revision session (it already carries 11 blocking items from the 2026-09-22 review).
+- **Q**: Device Frame assumes a cursor position derived from the "most urgent need" but defines neither the **empty** ranking (the normal state after a completed care session) nor the case where **sleep ranks first**, since sleep has no ring item. **Owner**: Device Frame & Button Input. **Target**: same revision session.
+- **Q**: Care Actions must accept `lights` as a non-ring contextual action that calls `apply_care(lights)` and requests the lights-out reaction. This matches Device Frame's existing Open Question on reclassifying lights. **Owner**: Care Actions. **Target**: that GDD's session.
+- **Q**: `systems-index.md` scope notes still say "Device Frame writes `dark` to Need System one-way — the same cycle-breaking pattern used for Device Frame ↔ Settings." That is stale: Device Frame has no data path into Need System. **Owner**: — . **Target**: next touch of the index.
 
 **Tuning and validation:**
 
-- **Q**: The MVP balance values (`decay_per_hour = 3.0`, `sad_threshold = 40`, `recover_per_hour = 5.0`) are derived arithmetically against a 24-hour check-in target and have never been played. The derived safe band (2.5–4.17 at threshold 40) bounds them, but only playtest can confirm the rhythm feels right rather than merely computing right. **Owner**: design. **Target**: first playtest.
+- **Q**: The MVP balance values (`decay_per_hour = 3.0`, sleep `1.5`, `sad_threshold = 40`) are derived arithmetically against a 24-hour check-in target and have never been played. The derived safe band (2.5–4.17 at threshold 40) bounds the daily needs, but only playtest can confirm the rhythm feels right rather than merely computing right, and whether sleep as the every-other-day need reads as a pleasant variation. **Owner**: design. **Target**: first playtest.
 - **Q**: The Player Fantasy claims a returning player feels *relief* rather than guilt. Need System alone cannot deliver that — it depends on the greeting beat owned by Pet Animation & Reactions and on the decay rate landing well. **Owner**: design. **Target**: vertical slice.

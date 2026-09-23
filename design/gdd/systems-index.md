@@ -20,7 +20,7 @@ Pocket Pal is mechanically small by design: a skeuomorphic three-button device w
 | 1 | Time Service (inferred) | Core | MVP | Approved (as-is) | design/gdd/time-service.md | — |
 | 2 | Pet Definition Data (inferred) | Core | MVP | Approved (with notes) | design/gdd/pet-definition-data.md | — |
 | 3 | Device Frame & Button Input | Gameplay | MVP | In Review | design/gdd/device-frame-button-input.md | — |
-| 4 | Need System | Gameplay | MVP | Designed | design/gdd/need-system.md | Time Service, Pet Definition Data |
+| 4 | Need System | Gameplay | MVP | Approved (revised) | design/gdd/need-system.md | Time Service, Pet Definition Data |
 | 5 | Save & Persistence | Persistence | MVP | Not Started | — | Time Service, Pet Definition Data |
 | 6 | Life Stage & Growth | Progression | MVP | Not Started | — | Time Service, Pet Definition Data, Save & Persistence |
 | 7 | LCD Screen Renderer (inferred) | UI | MVP | Not Started | — | Device Frame & Button Input, Pet Definition Data |
@@ -39,7 +39,7 @@ Pocket Pal is mechanically small by design: a skeuomorphic three-button device w
 - *Care Actions* includes the **Play Mini-Game** (left/right); its input model must be resolved inside that GDD.
 - *Life Stage & Growth* owns the **care-history rolling log** that Care Actions writes to and form selection reads from.
 - *LCD Screen Renderer* includes the **LCD HUD & Menu Icons** (need icons, menu cursor, "done for today" signal).
-- *Need System* has three edges not shown in the dependency column — found while designing Need System, 2026-09-22: **Device Frame & Button Input → Need System** (soft; `get_urgency_ranking()` places the menu cursor, and the device stays usable with an empty ranking, which keeps Device Frame buildable first), **LCD Screen Renderer → Need System** (hard; the folded-in need icons require current values and `SAD` flags), and **Save & Persistence ↔ Need System** (hard, two-way; Save serialises the need anchors). Device Frame writes `dark` to Need System one-way — the same cycle-breaking pattern used for Device Frame ↔ Settings.
+- *Need System* has three edges not shown in the dependency column — found while designing Need System, 2026-09-22: **Device Frame & Button Input → Need System** (soft; `get_urgency_ranking()` places the menu cursor, and the device stays usable with an empty ranking, which keeps Device Frame buildable first), **LCD Screen Renderer → Need System** (hard; the folded-in need icons require current values and `SAD` flags), and **Save & Persistence ↔ Need System** (hard, two-way; Save serialises the need anchors). Device Frame writes nothing to Need System: lights is press-restored and reaches it as `apply_care(lights)` via Care Actions, like every other care action (revised 2026-09-22 after `/design-review`).
 - *Device Frame & Button Input* has a **soft two-way edge to Life Stage & Growth** (`request_confirm()` / `confirm_result()`) not shown in the dependency column — found while designing Device Frame, 2026-09-22. Growth functions without a confirm prompt, so it is soft, but the channel is real.
 
 **Deliberately excluded:** analytics/telemetry (nothing needs it; cuts against the cozy tone), monetization/IAP (shells are earned, never sold), social/sharing, "Species" as a system (species are Pet Definition Data).
@@ -161,8 +161,8 @@ Effort: S = 1 session, M = 2–3 sessions, L = 4+ sessions. Systems 1–2 are in
 |--------|-------|
 | Total systems identified | 16 |
 | Design docs started | 4 |
-| Design docs reviewed | 3 |
-| Design docs approved | 2 |
+| Design docs reviewed | 4 |
+| Design docs approved | 3 |
 | MVP systems designed | 4/10 |
 | Vertical Slice systems designed | 0/3 |
 
