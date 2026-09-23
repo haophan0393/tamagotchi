@@ -30,7 +30,7 @@
 #   Superseded entries:     Grep pattern="status: superseded"
 
 version: 1
-last_updated: ""
+last_updated: "2026-09-23"
 
 # ─── STATE OWNERSHIP ─────────────────────────────────────────────────────────
 # Who is the authoritative owner of each piece of shared game state.
@@ -43,7 +43,40 @@ last_updated: ""
 # interface: how other systems access this state (read-only property, method call,
 #   signal, shared resource, etc.) — this is the contract other ADRs depend on.
 
-state_ownership: []
+state_ownership:
+  - state: engine_wall_clock
+    status: active
+    owner_system: time-service
+    adr: docs/architecture/adr-0001-time-and-event-injection.md
+    interface: "Read only via SystemTimeSource (src/core/time/system_time_source.gd) behind TimeSource; everything else uses an injected TimeService"
+    write_access: none (read-only OS clock)
+    referenced_by:
+      - docs/architecture/adr-0001-time-and-event-injection.md
+    added: 2026-09-23
+    revised: ""
+
+  - state: production_time_service_instance
+    status: active
+    owner_system: time-service
+    adr: docs/architecture/adr-0001-time-and-event-injection.md
+    interface: "TimeProvider.service (Autoload, read-only TimeService). Read by GameRoot only; logic receives it through _init()"
+    write_access: TimeProvider-only
+    referenced_by:
+      - docs/architecture/adr-0001-time-and-event-injection.md
+    added: 2026-09-23
+    revised: ""
+
+
+  - state: pet_definitions
+    status: active
+    owner_system: pet-definition-data
+    adr: docs/architecture/adr-0002-pet-catalog-loading-and-immutability.md
+    interface: "PetCatalog lookups (injected). Definitions are locked DefinitionResource graphs: read-only after READY; writes are rejected by setter guards"
+    write_access: PetCatalogLoader only, before lock()
+    referenced_by:
+      - docs/architecture/adr-0002-pet-catalog-loading-and-immutability.md
+    added: 2026-09-23
+    revised: ""
 
 # Example:
 #
@@ -71,7 +104,63 @@ state_ownership: []
 #
 # pattern options: signal | direct_call | event_bus | shared_resource | rpc | none
 
-interfaces: []
+interfaces:
+  - contract: time_source
+    status: active
+    pattern: direct_call
+    producer: time-service
+    consumers:
+      - time-service   # TimeService wraps it; no other system touches TimeSource
+    adr: docs/architecture/adr-0001-time-and-event-injection.md
+    signature: "@abstract TimeSource extends RefCounted: get_unix_time() -> int; get_timezone_bias_minutes() -> int  # minutes EAST of UTC"
+    referenced_by:
+      - docs/architecture/adr-0001-time-and-event-injection.md
+      - tests/unit/time_service/time_service_contract_test.gd
+    added: 2026-09-23
+    revised: ""
+
+  - contract: logic_event_delivery
+    status: active
+    pattern: signal
+    producer: any logic class (RefCounted)
+    consumers:
+      - any system, connected by GameRoot
+    adr: docs/architecture/adr-0001-time-and-event-injection.md
+    signal_signature: "Typed signals declared on the emitting class (e.g. NeedSystem.need_became_sad(need_id: Need.Id)); GameRoot is the only place connect() is called across systems"
+    referenced_by:
+      - docs/architecture/adr-0001-time-and-event-injection.md
+    added: 2026-09-23
+    revised: ""
+
+  - contract: app_lifecycle
+    status: active
+    pattern: signal
+    producer: AppLifecycle (src/core/app/app_lifecycle.gd)
+    consumers:
+      - GameRoot   # single handler; defines resume order
+    adr: docs/architecture/adr-0001-time-and-event-injection.md
+    signal_signature: "app_backgrounded(); app_resumed()  — from APPLICATION_PAUSED/RESUMED and FOCUS_OUT/IN, edge-detected. Resume order lives only in GameRoot._on_app_resumed(): offline_sim.reanchor_with_cap -> needs.on_resumed -> crossing_scheduler.rearm"
+    referenced_by:
+      - docs/architecture/adr-0001-time-and-event-injection.md
+    added: 2026-09-23
+    revised: ""
+
+
+  - contract: pet_catalog_lookup
+    status: active
+    pattern: direct_call
+    producer: pet-definition-data (PetCatalog, RefCounted)
+    consumers:
+      - save-persistence
+      - hatching-onboarding
+      - graduation-album
+      - game-root   # passes NeedProfile/CareProfile into per-pet consumers such as NeedSystem
+    adr: docs/architecture/adr-0002-pet-catalog-loading-and-immutability.md
+    signature: "get_species(id: StringName) -> SpeciesDefinition; get_form(id: StringName) -> AdultFormDefinition; get_all_species() / get_hatchable_species() -> Array[SpeciesDefinition] (read-only). Unknown id -> null"
+    referenced_by:
+      - docs/architecture/adr-0002-pet-catalog-loading-and-immutability.md
+    added: 2026-09-23
+    revised: ""
 
 # Example:
 #
@@ -131,7 +220,19 @@ performance_budgets: []
 # Register an API decision when the choice is non-obvious and other ADRs might
 # make a different choice for the same purpose without knowing this was decided.
 
-api_decisions: []
+api_decisions:
+
+
+  - purpose: pet_definition_storage
+    status: active
+    api: "Custom Resource .tres (DefinitionResource subclasses), reached via CatalogManifest @export Array[SpeciesDefinition] ext_resource references"
+    not: "JSON definition files; resource path strings in data"
+    adr: docs/architecture/adr-0002-pet-catalog-loading-and-immutability.md
+    reason: "Inspector authoring plus export dependency tracking; path strings risk silent PCK omission"
+    referenced_by:
+      - docs/architecture/adr-0002-pet-catalog-loading-and-immutability.md
+    added: 2026-09-23
+    revised: ""
 
 # Example:
 #
@@ -157,7 +258,55 @@ api_decisions: []
 # Register a pattern when an ADR explicitly bans it AND other ADRs might
 # unknowingly use it (i.e., it's a tempting but wrong approach for this project).
 
-forbidden_patterns: []
+forbidden_patterns:
+  - pattern: autoload_access_from_logic
+    status: active
+    description: "Logic classes must not reference any Autoload (incl. TimeProvider) or get_tree(). Only src/core/app/ (GameRoot) and src/core/time/ may name TimeProvider."
+    why: "Keeps every logic class constructible in a unit test with FakeTimeSource and no scene tree."
+    adr: docs/architecture/adr-0001-time-and-event-injection.md
+    added: 2026-09-23
+
+  - pattern: global_event_bus
+    status: active
+    description: "No Events/EventBus Autoload for gameplay signals in MVP. Emitters declare their own typed signals."
+    why: "Hides dependencies and shares global state across tests; the MVP system graph is small and known."
+    adr: docs/architecture/adr-0001-time-and-event-injection.md
+    added: 2026-09-23
+
+  - pattern: engine_timer_in_logic
+    status: active
+    description: "No engine Timer, _process tick, or per-frame decay inside logic classes. Timers live only in adapter Nodes (e.g. NeedCrossingScheduler) that hold no rules."
+    why: "Need values are computed on read from anchors; a tick would duplicate the decay path and break determinism."
+    adr: docs/architecture/adr-0001-time-and-event-injection.md
+    added: 2026-09-23
+
+  - pattern: definition_duplicate
+    status: active
+    description: "No duplicate()/duplicate_deep() on any DefinitionResource type outside tests/."
+    why: "_locked is not a stored property, so a duplicate is an unlocked, writable copy that escapes Core Rule 3."
+    adr: docs/architecture/adr-0002-pet-catalog-loading-and-immutability.md
+    added: 2026-09-23
+
+  - pattern: sprite_frames_mutation
+    status: active
+    description: "No SpriteFrames mutators under src/ (add/remove/set_frame, clear, clear_all, add/remove/rename/duplicate_animation, set_animation_speed/loop/loop_mode)."
+    why: "SpriteFrames is an engine class that setter guards cannot protect, and it is shared by reference from the catalog."
+    adr: docs/architecture/adr-0002-pet-catalog-loading-and-immutability.md
+    added: 2026-09-23
+
+  - pattern: pet_data_load_outside_loader
+    status: active
+    description: "Only PetCatalogLoader may load() or ResourceLoader.load() anything under res://assets/data/pets/."
+    why: "A CACHE_MODE_IGNORE load returns an unlocked instance that bypasses the catalog lock."
+    adr: docs/architecture/adr-0002-pet-catalog-loading-and-immutability.md
+    added: 2026-09-23
+
+  - pattern: dictionary_in_definition_schema
+    status: active
+    description: "No Dictionary-typed fields in DefinitionResource subclasses; use named fields or typed arrays."
+    why: "make_read_only() is shallow and dictionaries cannot be setter-guarded per key."
+    adr: docs/architecture/adr-0002-pet-catalog-loading-and-immutability.md
+    added: 2026-09-23
 
 # Example:
 #

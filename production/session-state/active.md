@@ -1,6 +1,38 @@
 # Active Session State
 
-*Updated: 2026-09-22 (Device Frame reviewed; Need System GDD authored, pending review)*
+*Updated: 2026-09-23 (shortcut to code; ADR-0001 written)*
+
+## NOW — SHORTCUT TO CODE (decided 2026-09-23)
+User chose to start code on the three approved systems (Time Service, Pet Definition Data, Need System) before the remaining GDDs are done.
+Save & Persistence GDD is PAUSED at section D (Formulas) — resume later; ADR-0002 may need a revision once it is approved.
+
+Shortcut plan:
+1. **DONE 2026-09-23** — ADR-0001 time & event injection → docs/architecture/adr-0001-time-and-event-injection.md (Proposed). Time Service GDD Core Rule 2 synced (constructor injection); 2 OQs marked resolved.
+   - Pre-/dev-story checks owed (local 4.7.1): body-less `@abstract func` compiles; `extends TimeSource` works from tests/helpers/ and from an inner class. A compile probe was denied — run it manually or approve it.
+   - On-device checks owed: PAUSED/RESUMED fire + reach a child Node; tz `bias` sign on Android AND iOS (godot#37571); stale Timer on resume.
+   - Registry updated 2026-09-23 (2 state, 3 interfaces, 3 forbidden patterns).
+2. **DONE 2026-09-23** — ADR-0002 pet catalog loading, injection & immutability → docs/architecture/adr-0002-pet-catalog-loading-and-immutability.md (Proposed). `.tres` Resources + CatalogManifest (ext_resource refs); pure CatalogValidator; injected `strict` build-type flag; PetCatalog lookups return null; setter guards + recursive lock(); CI lint for SpriteFrames mutators / duplicate() / pet-data load(). NeedSystem._init(time, need_profile, care_profile). PDD GDD synced (Rules 3, 13; 2 ACs; OQ#1 half, #2, #9 resolved). Registry updated (+1 state, +1 interface, +1 api, +4 forbidden).
+   - Pre-/dev-story checks owed (local 4.7.1): Object.set() hits setters on a locked resource; String arg → StringName-keyed dict lookup; make_read_only rejects append/sort.
+   - Export checks owed: manifest species included in the PCK with a filtered preset; **on a real device export, catalog READY with ≥1 species** (godot#98798, typed arrays loading empty on export).
+3. **NEXT SESSION** — `/create-epics` (foundation layer only: Time Service, Pet Definition Data, Need System) → `/create-stories` → `/dev-story`.
+   - Run `/architecture-review` in a FRESH session at some point (never in the authoring session).
+   - ADR renumbering: 0003 = save format/versioning (waits on the Save GDD); 0004 = LCD rendering (SubViewport spike).
+   - Need System's asks of PDD are still open: validation `floor < sad_threshold < 100`, `decay_per_hour ≥ 0.01`. CatalogValidator implements PDD Rule 12, so fold these into the PDD before the validator story.
+
+## PAUSED — Save & Persistence GDD (5), `/design-system save-persistence`
+- File: design/gdd/save-persistence.md — skeleton created
+- Review mode: solo (production/review-mode.txt); reduced depth per compressed path
+- Current section: Formulas (D)
+- Sections done: Overview, Player Fantasy, Detailed Rules (decisions: backup+split album file; quarantine+new egg on catalog miss; write on background + coalesced events)
+
+## CORRECTION 2026-09-22 — Need System was reviewed and REVISED (supersedes the section below)
+`/design-review` → NEEDS REVISION → revised same session → **Approved (revised)**. See
+design/gdd/reviews/need-system-review-log.md. **Sleep is now PRESS-RESTORED** via
+`apply_care(lights)` — no `dark` flag, no `set_dark`, no `recover_per_hour`;
+`all_needs_addressed` = every need CONTENT. Core Rule 14 split into pure
+`check_crossings()` / `on_resumed()` + `NeedCrossingScheduler` adapter. The
+"Sleep is rate-switched" and "Done for today redefined as addressed" notes below are STALE.
+design/registry/entities.yaml Need System entries are also stale — fix in the Save GDD's Phase 5b.
 
 ## Current Task
 
