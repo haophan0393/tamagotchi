@@ -7,7 +7,7 @@ paths:
 
 - Test naming: `test_[system]_[scenario]_[expected_result]` pattern
 - Every test must have a clear arrange/act/assert structure
-- Unit tests must not depend on external state (filesystem, network, database)
+- Unit tests must not depend on external state (filesystem, network, database) — except loading a read-only `res://tests/fixtures/` resource to verify engine loading behaviour (see coding-standards.md)
 - Integration tests must clean up after themselves
 - Performance tests must specify acceptable thresholds and fail if exceeded
 - Test data must be defined in the test or in dedicated fixtures, never shared mutable state

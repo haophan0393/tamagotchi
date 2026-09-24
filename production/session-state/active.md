@@ -392,3 +392,28 @@ carries over. Do not fork the tests.
 - Story: production/epics/time-service/story-004-app-lifecycle-adapter.md — AppLifecycle adapter and resume/background handler slots
 - Tech debt logged: None (AC-5 untestable-by-design and AC-6 handler-order gap recorded in story Completion Notes only)
 - Next recommended: production/epics/time-service/story-005-on-device-verification.md (needs real Android/iOS device + export presets) or production/epics/pet-definition-data/story-001-enums-and-definition-base.md (parallel, no device needed)
+
+## Session Extract — /dev-story 2026-09-24 (PDD story 001)
+- Story: production/epics/pet-definition-data/story-001-enums-and-definition-base.md — Code enums and the DefinitionResource base
+- Files changed: src/core/pet_data/{pet_enums.gd (Need), care_action.gd (CareAction), life_stage.gd (LifeStage), definition_resource.gd} (+ .uid); tests/fixtures/pet_data/{probe_definition.gd, probe_container_definition.gd, probe_definition.tres}
+- Test written: tests/unit/pet_definition_data/definition_resource_test.gd (11 tests); full suite 45/45 pass
+- Deviation: enums split into 3 files (one global class_name per script is needed for bare `Need.Id` access); ADR-0002 §1 names only pet_enums.gd → amend ADR/story wording at /story-done
+- ADR-0002 verification on 4.7.1: #1 PASS (loader runs the setter while unlocked); #2 PASS (set() rejected + error); #3 PASS (String literal → StringName param resolves the dict key); #4 PARTIAL — array always unchanged, but `arr[i] = v` is a GDScript runtime SCRIPT ERROR that aborts the calling function (append/sort are non-fatal C++ ERR_FAIL). No process crash, but a consumer's function stops mid-way → ADR-0002 §2 "never crashes" wording needs a note; CI lint candidate for indexed writes into definition arrays
+- gdUnit4 note: C++ ERR_FAIL errors are captured as raw condition text (`Condition "_p->read_only" is true.`), not the console message
+- Blockers: None
+- Next: /code-review src/core/pet_data/*.gd tests/unit/pet_definition_data/definition_resource_test.gd then /story-done
+
+## Session Extract — /code-review 2026-09-24 (PDD story 001)
+- Verdict: CHANGES REQUIRED → fixed (godot-gdscript-specialist: 1 BLOCKING + 3 WARN; qa-tester: GAPS)
+- Applied: lock() early-return guard (idempotent + cycle-safe); `as` casts on Variant calls; lock() moved above _reject_write; lock() doc now states arr[i]=v aborts the caller; setter-param convention `new_value` in doc examples; AC-2 now asserts exactly one push_error (extra GdUnitLogger) + resource_path naming via CACHE_MODE_IGNORE load; new tests: cyclic graph, null nested, non-definition array (fixture gained `tags: Array[StringName]`)
+- User ruling: Verification #1 stays in tests/unit — narrow fixture-load exception added to .claude/docs/coding-standards.md and .claude/rules/test-standards.md
+- Suite 49/49 pass (pet_definition_data 15 tests)
+- Still owed at /story-done: ADR-0002 §2 note on arr[i]=v abort + lint rule for indexed writes into definition arrays (story 008); story ACs/Test Evidence/completion notes (Verification #1–#4 results, 3-file enum split)
+- Next: /story-done production/epics/pet-definition-data/story-001-enums-and-definition-base.md
+
+## Session Extract — /story-done 2026-09-24 (PDD story 001)
+- Verdict: COMPLETE WITH NOTES
+- Story: production/epics/pet-definition-data/story-001-enums-and-definition-base.md — Code enums and the DefinitionResource base
+- Docs amended: ADR-0002 §1 (3 enum files), §2 (early-return lock, arr[i]=v aborts caller, new lint), Verification results; docs/registry/architecture.yaml (+ definition_array_index_write); story 008 (+ 5th lint AC)
+- Tech debt logged: None
+- Next recommended: production/epics/pet-definition-data/story-002-schema-classes.md (unlocked by 001; use `new_value` setter-param convention)

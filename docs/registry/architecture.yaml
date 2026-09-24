@@ -287,6 +287,13 @@ forbidden_patterns:
     adr: docs/architecture/adr-0002-pet-catalog-loading-and-immutability.md
     added: 2026-09-23
 
+  - pattern: definition_array_index_write
+    status: active
+    description: "No indexed assignment (arr[i] = v) into an Array field of any DefinitionResource type under src/."
+    why: "Definition arrays are read-only after lock(); on 4.7.1 an indexed write is a GDScript runtime error that aborts the calling function (ADR-0002 Verification #4), unlike append()/sort() which only log."
+    adr: docs/architecture/adr-0002-pet-catalog-loading-and-immutability.md
+    added: 2026-09-24
+
   - pattern: sprite_frames_mutation
     status: active
     description: "No SpriteFrames mutators under src/ (add/remove/set_frame, clear, clear_all, add/remove/rename/duplicate_animation, set_animation_speed/loop/loop_mode)."

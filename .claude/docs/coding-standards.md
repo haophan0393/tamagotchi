@@ -47,6 +47,9 @@ All stories must have appropriate test evidence before they can be marked Done:
 - **No hardcoded data**: Test fixtures use constant files or factory functions, not inline magic numbers
   (exception: boundary value tests where the exact number IS the point)
 - **Independence**: Unit tests do not call external APIs, databases, or file I/O — use dependency injection
+  - *Exception (2026-09-24)*: a unit test may `load()` a read-only `res://tests/fixtures/` resource when the
+    engine's own loading behaviour is what it verifies (e.g. ADR-0002 Verification #1). Use
+    `ResourceLoader.CACHE_MODE_IGNORE` if the test mutates or locks the loaded instance. Never write files.
 
 ## What NOT to Automate
 

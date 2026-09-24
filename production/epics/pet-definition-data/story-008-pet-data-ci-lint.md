@@ -35,6 +35,7 @@
 - [ ] **definition_duplicate** — CI fails on `.duplicate(` / `.duplicate_deep(` in any `src/` file that names a `*Definition`, `NeedProfile`, `NeedParams`, `CareProfile` or `FormRule*` type
 - [ ] **pet_data_load_outside_loader** — CI fails on `load(`, `preload(` or `ResourceLoader.` with a `res://assets/data/pets/` path anywhere under `src/` except `src/core/pet_data/pet_catalog_loader.gd`
 - [ ] **dictionary_in_definition_schema** — CI fails on a `Dictionary`-typed `@export` in any `src/core/pet_data/` file
+- [ ] **definition_array_index_write** — CI fails on an indexed assignment (`x.<field>[i] = …`) into an Array field of a `*Definition`, `NeedProfile`, `NeedParams`, `CareProfile` or `FormRule*` value under `src/` *(added 2026-09-24 from Story 001, ADR-0002 Verification #4)*
 - [ ] Each lint is proven by planting a probe locally and seeing it fail, then removing it and seeing it pass; outputs recorded in the evidence doc
 
 ---
@@ -46,6 +47,7 @@
 - Add a `pet-data-discipline` job to `.github/workflows/tests.yml` next to `clock-discipline` (or extend that job's steps — keep one step per pattern so failures name the rule).
 - `SpriteFrames` mutators: grep calls whose receiver is typed or named as sprite frames — practical heuristic: flag the 11 unambiguous mutators anywhere under `src/`, and flag `.clear(` / `.clear_all(` only on lines containing `sprite_set` or `SpriteFrames`. Document the heuristic's limit in the job comment.
 - `duplicate` rule is file-scoped per ADR-0002: a file is suspect if it names one of the types; then any `.duplicate(` in it fails.
+- `definition_array_index_write` is file-scoped like the `duplicate` rule: in a file naming one of the types, flag `\.[a-z_]+\[[^]]+\]\s*=[^=]` on a member access (heuristic — document its limit in the job comment).
 - Error messages cite the pattern name, ADR-0002 and the offending lines.
 
 ---
@@ -63,13 +65,13 @@
 
 *Written at story creation (solo mode — qa-lead not consulted).*
 
-For each of the four rules:
+For each of the five rules:
 
 - **AC-n**: `[rule]` catches a violation
-  - Given: a throwaway probe file under `src/` containing one violation (e.g. `sprite_set.add_frame(&"idle", tex)`; `species.duplicate()` in a file declaring `var s: SpeciesDefinition`; `load("res://assets/data/pets/bloop/bloop.tres")` in `src/gameplay/`; `@export var extra: Dictionary` in `src/core/pet_data/`)
+  - Given: a throwaway probe file under `src/` containing one violation (e.g. `sprite_set.add_frame(&"idle", tex)`; `species.duplicate()` in a file declaring `var s: SpeciesDefinition`; `load("res://assets/data/pets/bloop/bloop.tres")` in `src/gameplay/`; `@export var extra: Dictionary` in `src/core/pet_data/`; `species.stages[0] = other` in a file declaring `var species: SpeciesDefinition`)
   - When: the job's grep runs locally
   - Then: exits non-zero naming the file and rule
-  - Edge cases: after removing the probe it exits 0; `pet_catalog_loader.gd` loading the manifest does not trip rule 3; `some_array.clear()` in an unrelated file does not trip rule 1
+  - Edge cases: after removing the probe it exits 0; `pet_catalog_loader.gd` loading the manifest does not trip rule 3; `some_array.clear()` in an unrelated file does not trip rule 1; `local_list[0] = x` on a plain local array does not trip rule 5
 
 ---
 

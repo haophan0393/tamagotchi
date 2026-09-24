@@ -1,12 +1,12 @@
 # Story 001: Code enums and the DefinitionResource base
 
 > **Epic**: Pet Definition Data
-> **Status**: Ready
+> **Status**: Complete
 > **Layer**: Foundation
 > **Type**: Logic
 > **Estimate**: S–M (~2–3 h)
 > **Manifest Version**: N/A — no control manifest (compressed path); rules below come from `docs/registry/architecture.yaml` forbidden_patterns (2026-09-23)
-> **Last Updated**: [set by /dev-story when implementation begins]
+> **Last Updated**: 2026-09-24
 
 ## Context
 
@@ -31,10 +31,10 @@
 
 *From GDD `design/gdd/pet-definition-data.md` and ADR-0002 §1–2, scoped to this story:*
 
-- [ ] GDD AC (Core Rule 1) — `src/core/pet_data/pet_enums.gd` defines exactly four needs (`hunger`, `cleanliness`, `fun`, `sleep`), four care actions (`feed`, `clean`, `play`, `lights`) and four life stages (`egg`, `baby`, `child`, `adult`), in that order, as `Need.Id`, `CareAction.Id`, `LifeStage.Id`, not sourced from data
-- [ ] `DefinitionResource._reject_write(field)` returns `false` when unlocked, and `true` plus a `push_error` naming `resource_path` and the field when locked
-- [ ] `DefinitionResource.lock()` sets `_locked`, recurses into `DefinitionResource` values, calls `make_read_only()` on `Array` values and `lock()` on their `DefinitionResource` elements; calling it twice is harmless
-- [ ] ADR-0002 Verification #1–#4 run on local 4.7.1 and each result recorded in the story's completion notes
+- [x] GDD AC (Core Rule 1) — `src/core/pet_data/pet_enums.gd` defines exactly four needs (`hunger`, `cleanliness`, `fun`, `sleep`), four care actions (`feed`, `clean`, `play`, `lights`) and four life stages (`egg`, `baby`, `child`, `adult`), in that order, as `Need.Id`, `CareAction.Id`, `LifeStage.Id`, not sourced from data
+- [x] `DefinitionResource._reject_write(field)` returns `false` when unlocked, and `true` plus a `push_error` naming `resource_path` and the field when locked
+- [x] `DefinitionResource.lock()` sets `_locked`, recurses into `DefinitionResource` values, calls `make_read_only()` on `Array` values and `lock()` on their `DefinitionResource` elements; calling it twice is harmless
+- [x] ADR-0002 Verification #1–#4 run on local 4.7.1 and each result recorded in the story's completion notes
 
 ---
 
@@ -92,7 +92,7 @@
 **Required evidence**:
 - Logic: `tests/unit/pet_definition_data/definition_resource_test.gd` — must exist and pass
 
-**Status**: [ ] Not yet created
+**Status**: [x] Created — 15 tests, all passing (suite 49/49, 2026-09-24)
 
 ---
 
@@ -100,3 +100,20 @@
 
 - Depends on: None (can run in parallel with Time Service story 001)
 - Unlocks: Story 002
+
+---
+
+## Completion Notes
+**Completed**: 2026-09-24
+**Criteria**: 4/4 passing (all covered by automated tests)
+**Deviations** (advisory, docs amended 2026-09-24):
+- Enums live in three files — `pet_enums.gd` (`Need`), `care_action.gd` (`CareAction`), `life_stage.gd` (`LifeStage`) — because GDScript allows one global `class_name` per script and callers use bare `Need.Id`. ADR-0002 §1 amended.
+- `lock()` returns early when already locked (idempotent and cycle-safe) — ADR-0002 §2 amended.
+**ADR-0002 Verification on local 4.7.1**:
+- #1 PASS — `ResourceLoader` runs the guarded `@export` setter during `.tres` load while `_locked == false` (`setter_call_count == 1`, `value == 42`).
+- #2 PASS — `obj.set(&"value", 9)` on a locked definition goes through the setter: one `push_error`, value unchanged.
+- #3 PASS — a `String` literal passed to a `StringName`-typed parameter resolves a `StringName`-keyed `Dictionary`.
+- #4 PARTIAL — the array is never modified and the process never crashes, but only `append()`/`sort()` are non-fatal C++ errors (gdUnit4 captures them as `Condition "_p->read_only" is true.`); `arr[i] = v` is a GDScript runtime error (`Invalid assignment on read-only value (on base: 'Array[int]').`) that aborts the calling function. ADR-0002 §2 amended; new forbidden pattern `definition_array_index_write` in `docs/registry/architecture.yaml`; lint AC added to Story 008.
+**Test Evidence**: Logic — `tests/unit/pet_definition_data/definition_resource_test.gd` (15 tests); fixtures in `tests/fixtures/pet_data/`
+**Code Review**: Complete — CHANGES REQUIRED (lock() entry guard) + suggestions, all applied 2026-09-24; godot-gdscript-specialist and qa-tester consulted
+**Standards change**: narrow exception for loading read-only `res://tests/fixtures/` resources in unit tests (`.claude/docs/coding-standards.md`, `.claude/rules/test-standards.md`) — user ruling 2026-09-24
