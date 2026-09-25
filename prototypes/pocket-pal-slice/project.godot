@@ -1,0 +1,31 @@
+; VERTICAL SLICE - NOT FOR PRODUCTION
+; Validation Question: does the 30-second loop make the pet feel alive and glad
+; to see me, and is the 3-button ring learnable with no text?
+; Date: 2026-09-25
+
+config_version=5
+
+[application]
+
+config/name="Pocket Pal — quick slice (NOT FOR PRODUCTION)"
+run/main_scene="res://main.tscn"
+config/features=PackedStringArray("4.7", "Mobile")
+
+[display]
+
+window/size/viewport_width=720
+window/size/viewport_height=1280
+window/size/window_width_override=405
+window/size/window_height_override=720
+window/stretch/mode="canvas_items"
+window/stretch/aspect="expand"
+window/handheld/orientation=1
+
+[input_devices]
+
+pointing/emulate_touch_from_mouse=true
+
+[rendering]
+
+renderer/rendering_method="mobile"
+textures/canvas_textures/default_texture_filter=0

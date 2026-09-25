@@ -1,5 +1,19 @@
 # Active Session State
 
+## NOW — QUICK SLICE (started 2026-09-25) — `/vertical-slice`, Phase 4 — Implement
+User paused production stories (next was PDD story-002) to play the 30-second loop ASAP.
+- Path: `prototypes/pocket-pal-slice/` (standalone Godot project; prototypes/ has .gdignore; never import into src/)
+- Validation question: does the 30-second loop (greeting → A opens menu → A/C cycle → B select → reaction → icon clears → happy "done" idle) make the pet feel alive and glad to see me, and is the 3-button ring learnable with no text?
+- Scope: shell + 3 buttons (button-feel prototype), 64×64 SubViewport LCD + lcd_grid shader (LCD spike), procedural "Bloop", 4 needs with the GDD anchor formula, Device Frame state table (IDLE/MENU/ACTING + contextual lights on B), feed/clean/play/lights reactions.
+- User decisions: start with needs already sad + ~120× clock + desktop debug key (+6h); play = minimal left/right guess game (A=left, C=right, 3 rounds, no fail); desktop first, no phone export.
+- Cut: save, offline sim, growth, settings, shells.
+- Art: procedural placeholder pixel art; synthesized beeps.
+- Time box: 2 sessions. Stop and reassess if the loop is not playable by then.
+- Velocity log: Day 1 (2026-09-25): full loop built in one session (8 files, ~900 lines). Scripted drive.gd run passes 6/6 checks with 12 screenshots. Fixes after the visual check: lighter pet body (the face was unreadable), alert mark moved off the head, instant surprised face on a need crossing.
+- Phase: 4→5. Awaiting the user's desktop playtest, then the Phase 5 debrief (6 questions, one at a time) → REPORT.md → prototypes/index.md row
+- Resume production after: PDD story-002 (`new_value` setter convention).
+
+
 *Updated: 2026-09-23 (epics created; ADRs 0001–0002 Accepted)*
 
 ## NOW — SHORTCUT TO CODE (decided 2026-09-23)
